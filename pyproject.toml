@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hindsight-trace"
+version = "0.0.1"
+description = "Flight recorder + replay debugger for LLM agents. Read any trace, branch from any step, diff two runs — locally, no account."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Justin Whitcomb", email = "jwhitua@gmail.com"}]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.scripts]
+hindsight = "hindsight.cli:main"
+
+[project.optional-dependencies]
+live = ["anthropic>=0.40.0", "openai>=1.40.0"]
+otel = ["opentelemetry-sdk>=1.27.0", "opentelemetry-instrumentation-anthropic>=0.40.0"]
+dev = ["ruff>=0.4.0", "mypy>=1.10.0"]
+
+[project.urls]
+Repository = "https://github.com/jwhit777/hindsight"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hindsight"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Driver scripts insert ROOT onto sys.path before importing hindsight so they
+# work from a fresh clone without `pip install -e .`. That ordering is
+# intentional; silence E402 only for these two files.
+"src/spike_run.py" = ["E402"]
+"src/test_spike.py" = ["E402"]

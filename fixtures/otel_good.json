@@ -1,0 +1,111 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {"attributes": []},
+      "scopeSpans": [
+        {
+          "scope": {"name": "hindsight.fixture"},
+          "spans": [
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s1",
+              "parentSpanId": "",
+              "name": "orchestrator",
+              "startTimeUnixNano": "1779175964000000000",
+              "endTimeUnixNano": "1779175966520000000",
+              "attributes": [
+                {"key": "gen_ai.agent.name", "value": {"stringValue": "orchestrator"}},
+                {"key": "gen_ai.prompt", "value": {"stringValue": "What is AAPL price and should I buy now?"}},
+                {"key": "gen_ai.completion", "value": {"stringValue": "AAPL is $187.40. Trim — RSI overbought."}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s2",
+              "parentSpanId": "ot_s1",
+              "name": "router",
+              "startTimeUnixNano": "1779175964100000000",
+              "endTimeUnixNano": "1779175964280000000",
+              "attributes": [
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
+                {"key": "gen_ai.request.model", "value": {"stringValue": "claude-haiku-4-5"}},
+                {"key": "gen_ai.request.messages", "value": {"stringValue": "[{\"role\":\"user\",\"content\":\"route to subagent\"}]"}},
+                {"key": "gen_ai.response.content", "value": {"stringValue": "{\"choice\":\"stock-analyst\"}"}},
+                {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "412"}},
+                {"key": "gen_ai.usage.output_tokens", "value": {"intValue": "38"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s3",
+              "parentSpanId": "ot_s1",
+              "name": "tool.subagent.dispatch",
+              "startTimeUnixNano": "1779175964290000000",
+              "endTimeUnixNano": "1779175964292000000",
+              "attributes": [
+                {"key": "gen_ai.tool.name", "value": {"stringValue": "subagent.dispatch"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s4",
+              "parentSpanId": "ot_s3",
+              "name": "agent.stock-analyst",
+              "startTimeUnixNano": "1779175964295000000",
+              "endTimeUnixNano": "1779175966325000000",
+              "attributes": [
+                {"key": "gen_ai.agent.name", "value": {"stringValue": "stock-analyst"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s5",
+              "parentSpanId": "ot_s4",
+              "name": "analyse",
+              "startTimeUnixNano": "1779175964310000000",
+              "endTimeUnixNano": "1779175966190000000",
+              "attributes": [
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
+                {"key": "gen_ai.request.model", "value": {"stringValue": "claude-sonnet-4-6"}},
+                {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "8412"}},
+                {"key": "gen_ai.usage.output_tokens", "value": {"intValue": "1220"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s6",
+              "parentSpanId": "ot_s4",
+              "name": "tool.get_quote",
+              "startTimeUnixNano": "1779175966200000000",
+              "endTimeUnixNano": "1779175966248000000",
+              "attributes": [
+                {"key": "gen_ai.tool.name", "value": {"stringValue": "get_quote"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            },
+            {
+              "traceId": "trace_otel_good_001",
+              "spanId": "ot_s7",
+              "parentSpanId": "ot_s1",
+              "name": "summarize",
+              "startTimeUnixNano": "1779175966250000000",
+              "endTimeUnixNano": "1779175966530000000",
+              "attributes": [
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
+                {"key": "gen_ai.request.model", "value": {"stringValue": "claude-sonnet-4-6"}},
+                {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "620"}},
+                {"key": "gen_ai.usage.output_tokens", "value": {"intValue": "40"}}
+              ],
+              "status": {"code": "STATUS_CODE_OK"}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

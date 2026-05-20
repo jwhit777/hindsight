@@ -1,0 +1,95 @@
+{
+  "id": "ls_run_good_001",
+  "name": "orchestrator",
+  "run_type": "agent",
+  "start_time": "2026-05-15T09:12:44.000Z",
+  "end_time": "2026-05-15T09:12:46.520Z",
+  "inputs": {"user": "What is AAPL price and should I buy now?"},
+  "outputs": {"final": "AAPL is $187.40. Trim — RSI overbought."},
+  "extra": {},
+  "child_runs": [
+    {
+      "id": "ls_s2",
+      "name": "router",
+      "run_type": "llm",
+      "start_time": "2026-05-15T09:12:44.100Z",
+      "end_time": "2026-05-15T09:12:44.280Z",
+      "inputs": {"messages": [{"role": "user", "content": "route to subagent"}]},
+      "outputs": {"choice": "stock-analyst"},
+      "extra": {
+        "invocation_params": {
+          "model": "claude-haiku-4-5",
+          "usage": {"input_tokens": 412, "output_tokens": 38}
+        }
+      },
+      "child_runs": []
+    },
+    {
+      "id": "ls_s3",
+      "name": "subagent.dispatch",
+      "run_type": "tool",
+      "start_time": "2026-05-15T09:12:44.290Z",
+      "end_time": "2026-05-15T09:12:44.292Z",
+      "inputs": {"target": "stock-analyst"},
+      "outputs": {"ok": true},
+      "extra": {},
+      "child_runs": [
+        {
+          "id": "ls_s4",
+          "name": "stock-analyst",
+          "run_type": "agent",
+          "start_time": "2026-05-15T09:12:44.295Z",
+          "end_time": "2026-05-15T09:12:46.325Z",
+          "inputs": {"ticker": "AAPL"},
+          "outputs": {"verdict": "trim"},
+          "extra": {},
+          "child_runs": [
+            {
+              "id": "ls_s5",
+              "name": "analyse",
+              "run_type": "llm",
+              "start_time": "2026-05-15T09:12:44.310Z",
+              "end_time": "2026-05-15T09:12:46.190Z",
+              "inputs": {"messages": [{"role": "user", "content": "analyse AAPL"}]},
+              "outputs": {"text": "AAPL momentum mixed; RSI 71; trim."},
+              "extra": {
+                "invocation_params": {
+                  "model": "claude-sonnet-4-6",
+                  "usage": {"input_tokens": 8412, "output_tokens": 1220}
+                }
+              },
+              "child_runs": []
+            },
+            {
+              "id": "ls_s6",
+              "name": "get_quote",
+              "run_type": "tool",
+              "start_time": "2026-05-15T09:12:46.200Z",
+              "end_time": "2026-05-15T09:12:46.248Z",
+              "inputs": {"symbol": "AAPL"},
+              "outputs": {"price": 187.40, "as_of": "2026-05-15T09:12:30Z"},
+              "extra": {},
+              "child_runs": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ls_s7",
+      "name": "summarize",
+      "run_type": "llm",
+      "start_time": "2026-05-15T09:12:46.250Z",
+      "end_time": "2026-05-15T09:12:46.530Z",
+      "inputs": {"messages": [{"role": "system", "content": "summarise for user"}]},
+      "outputs": {"text": "AAPL is $187.40. Trim — RSI overbought."},
+      "extra": {
+        "invocation_params": {
+          "model": "claude-sonnet-4-6",
+          "usage": {"input_tokens": 620, "output_tokens": 40}
+        }
+      },
+      "child_runs": []
+    }
+  ]
+}

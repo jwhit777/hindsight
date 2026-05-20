@@ -1,0 +1,46 @@
+{
+  "error_count": 0,
+  "latency_ms": {
+    "count": 7,
+    "p50": 280,
+    "p95": 2372,
+    "total": 6940
+  },
+  "per_kind": {
+    "agent": 2,
+    "decision": 0,
+    "llm": 3,
+    "tool": 2
+  },
+  "per_model": {
+    "claude-haiku-4-5": {
+      "calls": 1,
+      "latency_ms": 180,
+      "tokens_in": 412,
+      "tokens_out": 38
+    },
+    "claude-sonnet-4-6": {
+      "calls": 2,
+      "latency_ms": 2160,
+      "tokens_in": 9032,
+      "tokens_out": 1260
+    }
+  },
+  "per_tool": {
+    "get_quote": {
+      "calls": 1,
+      "errors": 0
+    },
+    "subagent.dispatch": {
+      "calls": 1,
+      "errors": 0
+    }
+  },
+  "run_id": "run_good_001",
+  "source": "jsonl",
+  "step_count": 7,
+  "tokens": {
+    "in": 9444,
+    "out": 1298
+  }
+}

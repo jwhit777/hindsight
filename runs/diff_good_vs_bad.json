@@ -1,0 +1,14 @@
+{
+  "clean": false,
+  "first_divergent_a_id": "s2",
+  "first_divergent_b_id": "s2",
+  "first_divergent_field": "response",
+  "first_divergent_path": [
+    "agent:orchestrator",
+    "llm:router"
+  ],
+  "matched": 4,
+  "only_in_a": 3,
+  "only_in_b": 3,
+  "reason": "first divergence at path agent:orchestrator \u2192 llm:router on field 'response'"
+}
