@@ -7,6 +7,14 @@
 
 **Project status:** Day 0 — overnight spike complete (2026-05-15). v0.1 in progress. See [`PLAN.md`](./PLAN.md), [`SPIKE.md`](./SPIKE.md), and [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md).
 
+> **Install today** *(v0.1 ships to PyPI shortly; until then, install from source):*
+> ```bash
+> git clone https://github.com/jwhit777/hindsight && cd hindsight
+> python3 -m venv .venv && source .venv/bin/activate
+> pip install -e .
+> ```
+> The `pip install hindsight-trace` form in the demo below is the post-launch command.
+
 ---
 
 ## The 30-second pitch
