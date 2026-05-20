@@ -1,0 +1,93 @@
+{
+  "id": "trace_lf_good_001",
+  "name": "orchestrator",
+  "timestamp": "2026-05-15T09:12:44.000Z",
+  "input": {"user": "What is AAPL price and should I buy now?"},
+  "output": {"final": "AAPL is $187.40. Trim — RSI overbought."},
+  "observations": [
+    {
+      "id": "lf_obs_s2",
+      "type": "GENERATION",
+      "name": "router",
+      "startTime": "2026-05-15T09:12:44.100Z",
+      "endTime": "2026-05-15T09:12:44.280Z",
+      "input": {"messages": [{"role": "user", "content": "route to subagent"}]},
+      "output": {"choice": "stock-analyst"},
+      "model": "claude-haiku-4-5",
+      "usage": {"input": 412, "output": 38},
+      "parentObservationId": null,
+      "level": "DEFAULT",
+      "statusMessage": null
+    },
+    {
+      "id": "lf_obs_s3",
+      "type": "SPAN",
+      "name": "subagent.dispatch",
+      "startTime": "2026-05-15T09:12:44.290Z",
+      "endTime": "2026-05-15T09:12:44.292Z",
+      "input": {"target": "stock-analyst"},
+      "output": {"ok": true},
+      "model": null,
+      "usage": {},
+      "parentObservationId": null,
+      "level": "DEFAULT",
+      "statusMessage": null
+    },
+    {
+      "id": "lf_obs_s4",
+      "type": "SPAN",
+      "name": "stock-analyst",
+      "startTime": "2026-05-15T09:12:44.295Z",
+      "endTime": "2026-05-15T09:12:46.325Z",
+      "input": {"ticker": "AAPL"},
+      "output": {"verdict": "trim"},
+      "model": null,
+      "usage": {},
+      "parentObservationId": "lf_obs_s3",
+      "level": "DEFAULT",
+      "statusMessage": null
+    },
+    {
+      "id": "lf_obs_s5",
+      "type": "GENERATION",
+      "name": "analyse",
+      "startTime": "2026-05-15T09:12:44.310Z",
+      "endTime": "2026-05-15T09:12:46.190Z",
+      "input": {"messages": [{"role": "user", "content": "analyse AAPL"}]},
+      "output": {"text": "AAPL momentum mixed; RSI 71; trim."},
+      "model": "claude-sonnet-4-6",
+      "usage": {"input": 8412, "output": 1220},
+      "parentObservationId": "lf_obs_s4",
+      "level": "DEFAULT",
+      "statusMessage": null
+    },
+    {
+      "id": "lf_obs_s6",
+      "type": "SPAN",
+      "name": "get_quote",
+      "startTime": "2026-05-15T09:12:46.200Z",
+      "endTime": "2026-05-15T09:12:46.248Z",
+      "input": {"symbol": "AAPL"},
+      "output": {"price": 187.40, "as_of": "2026-05-15T09:12:30Z"},
+      "model": null,
+      "usage": {},
+      "parentObservationId": "lf_obs_s4",
+      "level": "DEFAULT",
+      "statusMessage": null
+    },
+    {
+      "id": "lf_obs_s7",
+      "type": "GENERATION",
+      "name": "summarize",
+      "startTime": "2026-05-15T09:12:46.250Z",
+      "endTime": "2026-05-15T09:12:46.530Z",
+      "input": {"messages": [{"role": "system", "content": "summarise for user"}]},
+      "output": {"text": "AAPL is $187.40. Trim — RSI overbought."},
+      "model": "claude-sonnet-4-6",
+      "usage": {"input": 620, "output": 40},
+      "parentObservationId": null,
+      "level": "DEFAULT",
+      "statusMessage": null
+    }
+  ]
+}
