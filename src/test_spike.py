@@ -128,18 +128,28 @@ class SpikeTests(unittest.TestCase):
     # ---- C1: LLM-content divergence ----
 
     def test_C1_llm_content_divergence(self):
-        a, b = _build_pair_with_field_div("response", {"x": "ok"}, {"x": "DIFF"})
-        d = diff(a, b)
+        good = ingest_jsonl(FIX / "canonical_llm_content_good.jsonl")
+        bad = ingest_jsonl(FIX / "canonical_llm_content_bad.jsonl")
+        d = diff(good, bad)
         self.assertFalse(d.is_clean)
         self.assertEqual(d.first_divergent_field, "response")
+        self.assertTrue(
+            (d.first_divergent_path or [])[-1] == "llm:summarize",
+            f"expected path to end with 'llm:summarize'; got {d.first_divergent_path}",
+        )
 
     # ---- C2: Tool-error divergence ----
 
     def test_C2_tool_error_divergence(self):
-        a, b = _build_pair_with_field_div("error", None, "rate_limited")
-        d = diff(a, b)
+        good = ingest_jsonl(FIX / "canonical_tool_error_good.jsonl")
+        bad = ingest_jsonl(FIX / "canonical_tool_error_bad.jsonl")
+        d = diff(good, bad)
         self.assertFalse(d.is_clean)
         self.assertEqual(d.first_divergent_field, "error")
+        self.assertTrue(
+            (d.first_divergent_path or [])[-1] == "tool:get_quote",
+            f"expected path to end with 'tool:get_quote'; got {d.first_divergent_path}",
+        )
 
     # ---- C3: Routing divergence on real fixtures ----
 
