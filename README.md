@@ -7,7 +7,7 @@
 
 **Project status:** v0.1.0 shipped (2026-05-21). See [`PLAN.md`](./PLAN.md), [`CHANGELOG.md`](./CHANGELOG.md), and [`SPIKE.md`](./SPIKE.md).
 
-> **Install today** *(v0.1 ships to PyPI shortly; until then, install from source):*
+> **Install today** *(until `hindsight-trace` lands on PyPI; install from source):*
 > ```bash
 > git clone https://github.com/jwhit777/hindsight && cd hindsight
 > python3 -m venv .venv && source .venv/bin/activate

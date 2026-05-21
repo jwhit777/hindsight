@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-21
+
 ### Added
 - **Sub-Agent Bench adapter** (`ingest_subagent_bench`) — 5th ingest format.
   Maps the nested `orchestrator → steps → subagent_call → steps` structure
@@ -27,8 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `canonical_latency_div_{good,bad}.jsonl` plus 4 new tests (C4–C7)
   verifying that default diff stays clean while `--strict` catches the
   divergence at the affected step.
-- **LAUNCH.md draft** at repo root — not for publication; v0.2 launch post
-  outline.
+- **LAUNCH.md draft** at repo root — not for publication; launch-post
+  outline for when v0.2 hits PyPI.
 - **README visual** — small ASCII "Hindsight is 20/20" panel before the pitch.
 - **Pre-commit hooks** (`.pre-commit-config.yaml`) — `ruff --fix` + `mypy`
   on every commit. Enable with `pre-commit install` after a fresh clone.
@@ -48,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`hindsight show --depth N`** — cap tree depth (0 = header only,
   1 = root only, N = up to N levels). Tree-only; silently ignored with
   `--json`.
-
 - **`hindsight serve`** + new `[web]` extra — local FastAPI web UI
   (browse / show / diff / replay) behind `pip install
   'hindsight-trace[web]'`. Zero-build HTML, no JS framework, server-
@@ -61,10 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **`__version__`** now read from package metadata via `importlib.metadata`
   rather than a literal string; eliminates version-drift class of bugs.
-
-### Changed
-- **Test count: 39** across `test_spike.py` (18), `test_replay.py` (12),
-  `test_cli_verbs.py` (9).
+- **Test count: 55** across `test_spike.py` (18), `test_replay.py` (12),
+  `test_cli_verbs.py` (14), `test_web.py` (11, skip when `[web]` not installed).
 - **CI runs on Node 24** via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in
   the workflow env. Surfaces any incompatibility now ahead of GitHub's
   2026-09-16 hard cutover; current actions/checkout@v4 +
@@ -113,5 +112,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `[otel]` extra adds `opentelemetry-sdk`.
 - Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/jwhit777/hindsight/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jwhit777/hindsight/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/jwhit777/hindsight/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jwhit777/hindsight/releases/tag/v0.1.0
