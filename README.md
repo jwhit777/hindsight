@@ -3,7 +3,7 @@
 > Open-source flight recorder + replay debugger for LLM agents.
 > Read any trace. Branch from any step. Diff two runs. Locally. No account.
 
-[![Status](https://img.shields.io/badge/status-spike-yellow)]() [![Python](https://img.shields.io/badge/python-3.10+-blue)]() [![Stdlib](https://img.shields.io/badge/deps-stdlib--only-brightgreen)]() [![License](https://img.shields.io/badge/license-Apache_2.0-green)]()
+[![CI](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml/badge.svg)](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/hindsight-trace.svg)](https://pypi.org/project/hindsight-trace/) [![Python](https://img.shields.io/badge/python-3.10+-blue)]() [![License](https://img.shields.io/badge/license-Apache_2.0-green)]()
 
 **Project status:** Day 0 — overnight spike complete (2026-05-15). v0.1 in progress. See [`PLAN.md`](./PLAN.md), [`SPIKE.md`](./SPIKE.md), and [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md).
 
