@@ -48,12 +48,14 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_diff.add_argument("a")
     sp_diff.add_argument("b")
     sp_diff.add_argument("--md", action="store_true", help="Emit Markdown instead of JSON.")
+    sp_diff.add_argument("--strict", action="store_true", help="Also compare tokens_in / tokens_out / latency_ms.")
 
     sp_rep = sub.add_parser("replay", help="Replay a run from step N onward.")
     sp_rep.add_argument("path")
     sp_rep.add_argument("--from-step", required=True, help="Step id or numeric index to resume from.")
     sp_rep.add_argument("--model", help="Override model on LLM steps in the replayed tail.")
     sp_rep.add_argument("--live", action="store_true", help="Use AnthropicProvider (requires ANTHROPIC_API_KEY + anthropic extra).")
+    sp_rep.add_argument("--live-tools", action="store_true", help="Route TOOL steps through the provider too (opt-in; default copies TOOL verbatim).")
     sp_rep.add_argument("--out", help="Write replayed canonical to PATH (JSONL); default stdout JSONL.")
 
     # ci — nested subparser group for CI-gate variants
@@ -65,6 +67,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_ci_diff.add_argument("b")
     sp_ci_diff.add_argument("--gate", action="store_true", help="Exit 1 if diff is not clean.")
     sp_ci_diff.add_argument("--md", action="store_true", help="Emit Markdown instead of JSON.")
+    sp_ci_diff.add_argument("--strict", action="store_true", help="Also compare tokens_in / tokens_out / latency_ms.")
 
     # validate — schema conformance check
     sp_validate = sub.add_parser("validate", help="Check canonical-schema conformance of a trace.")
@@ -88,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "diff":
-        d = diff(_auto_ingest(pathlib.Path(args.a)), _auto_ingest(pathlib.Path(args.b)))
+        d = diff(_auto_ingest(pathlib.Path(args.a)), _auto_ingest(pathlib.Path(args.b)), strict=args.strict)
         if args.md:
             print(diff_markdown(d))
         else:
@@ -102,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             from_step = int(args.from_step)
         except ValueError:
             pass
-        replayed: TraceRun = replay(run, from_step, model=args.model, live=args.live)
+        replayed: TraceRun = replay(run, from_step, model=args.model, live=args.live, live_tools=args.live_tools)
         out_text = replayed.to_jsonl()
         if args.out:
             pathlib.Path(args.out).write_text(out_text)
@@ -115,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
             d = diff(
                 _auto_ingest(pathlib.Path(args.a)),
                 _auto_ingest(pathlib.Path(args.b)),
+                strict=args.strict,
             )
             # Emit payload to stdout
             if args.md:
