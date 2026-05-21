@@ -56,6 +56,20 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_rep.add_argument("--live", action="store_true", help="Use AnthropicProvider (requires ANTHROPIC_API_KEY + anthropic extra).")
     sp_rep.add_argument("--out", help="Write replayed canonical to PATH (JSONL); default stdout JSONL.")
 
+    # ci — nested subparser group for CI-gate variants
+    sp_ci = sub.add_parser("ci", help="CI-gate variants of hindsight verbs.")
+    ci_sub = sp_ci.add_subparsers(dest="ci_cmd", required=True)
+
+    sp_ci_diff = ci_sub.add_parser("diff", help="Diff two runs; optionally gate on divergence.")
+    sp_ci_diff.add_argument("a")
+    sp_ci_diff.add_argument("b")
+    sp_ci_diff.add_argument("--gate", action="store_true", help="Exit 1 if diff is not clean.")
+    sp_ci_diff.add_argument("--md", action="store_true", help="Emit Markdown instead of JSON.")
+
+    # validate — schema conformance check
+    sp_validate = sub.add_parser("validate", help="Check canonical-schema conformance of a trace.")
+    sp_validate.add_argument("path")
+
     return p
 
 
@@ -94,6 +108,44 @@ def main(argv: list[str] | None = None) -> int:
             pathlib.Path(args.out).write_text(out_text)
         else:
             sys.stdout.write(out_text)
+        return 0
+
+    if args.cmd == "ci":
+        if args.ci_cmd == "diff":
+            d = diff(
+                _auto_ingest(pathlib.Path(args.a)),
+                _auto_ingest(pathlib.Path(args.b)),
+            )
+            # Emit payload to stdout
+            if args.md:
+                print(diff_markdown(d))
+            else:
+                print(json.dumps(d.to_dict(), indent=2, sort_keys=True, default=str))
+            # Always print one-line summary to stderr
+            if d.is_clean:
+                print("hindsight ci diff: clean", file=sys.stderr)
+            else:
+                path_str = " → ".join(d.first_divergent_path or [])
+                print(
+                    f"hindsight ci diff: diverged at {path_str}"
+                    f" on {d.first_divergent_field}",
+                    file=sys.stderr,
+                )
+            if args.gate and not d.is_clean:
+                return 1
+            return 0
+
+    if args.cmd == "validate":
+        path = pathlib.Path(args.path)
+        run = _auto_ingest(path)  # raises SystemExit(1) on missing file
+        try:
+            run.validate()
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return 2
+        n_steps = len(run.steps)
+        kinds = len({s.kind for s in run.steps})
+        print(f"hindsight validate: {path} OK — {n_steps} steps, {kinds} kinds")
         return 0
 
     return 2
