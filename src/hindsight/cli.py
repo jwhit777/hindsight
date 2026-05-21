@@ -94,6 +94,13 @@ def _build_parser() -> argparse.ArgumentParser:
     # version — rich version + adapter list
     sub.add_parser("version", help="Print hindsight version, registered ingesters, and replay providers.")
 
+    # serve — local web UI (requires [web] extra)
+    sp_serve = sub.add_parser("serve", help="Run the local FastAPI web UI (requires [web] extra).")
+    sp_serve.add_argument("--root", default=".", help="Directory to browse for trace files (default: cwd).")
+    sp_serve.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1).")
+    sp_serve.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080).")
+    sp_serve.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload (template editing).")
+
     return p
 
 
@@ -162,6 +169,32 @@ def main(argv: list[str] | None = None) -> int:
             if args.gate and not d.is_clean:
                 return 1
             return 0
+
+    if args.cmd == "serve":
+        try:
+            import uvicorn  # noqa: PLC0415
+
+            from .web import create_app  # noqa: PLC0415
+        except ImportError as exc:
+            print(
+                "hindsight serve requires the [web] extra. "
+                "Install with: pip install 'hindsight-trace[web]'",
+                file=sys.stderr,
+            )
+            print(f"(original error: {exc})", file=sys.stderr)
+            return 2
+        root = pathlib.Path(args.root).resolve()
+        if not root.is_dir():
+            print(f"hindsight serve: --root not a directory: {root}", file=sys.stderr)
+            return 2
+        print(
+            f"Serving hindsight UI at http://{args.host}:{args.port}/ "
+            f"(root={root})",
+            file=sys.stderr,
+        )
+        app = create_app(root)
+        uvicorn.run(app, host=args.host, port=args.port, reload=args.reload, log_level="warning")
+        return 0
 
     if args.cmd == "version":
         ingester_names = ", ".join(i.name for i in INGESTERS) or "(none)"

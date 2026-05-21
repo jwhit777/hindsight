@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Hindsight{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">Hindsight</a>
+    <nav>
+      <a href="/">Browse</a>
+      <a href="/diff">Diff</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="foot">
+    <span>local-first · 127.0.0.1 · CLI is canonical · web is opt-in</span>
+  </footer>
+</body>
+</html>

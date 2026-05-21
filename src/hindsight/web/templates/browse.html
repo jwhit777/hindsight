@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Browse — Hindsight{% endblock %}
+{% block content %}
+<h1>Traces under <code>{{ root }}</code></h1>
+{% if files %}
+<ul class="file-list">
+  {% for f in files %}
+  <li>
+    <a class="file-link" href="/show?path={{ f }}">{{ f }}</a>
+    <span class="file-actions">
+      <a class="ghost" href="/replay?path={{ f }}">replay</a>
+    </span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">No <code>.jsonl</code> or <code>.json</code> traces under root. Pass <code>--root &lt;dir&gt;</code> when starting <code>hindsight serve</code>.</p>
+{% endif %}
+{% endblock %}

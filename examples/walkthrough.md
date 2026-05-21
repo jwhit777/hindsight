@@ -262,3 +262,29 @@ For documentation on setting up the CI gate, see the README's CI section.
 (The README CI section is a merge-time addition by the maintainer; the pattern
 is: capture a run in your test step, then call `hindsight diff golden.jsonl
 captured.jsonl` and fail the job if the exit code is non-zero.)
+
+---
+
+## 7. Browse in a web UI
+
+For traces too deep to comfortably read in the terminal, Hindsight ships
+an opt-in local FastAPI web UI:
+
+```bash
+pip install 'hindsight-trace[web]'
+hindsight serve --root ./fixtures
+# Serving hindsight UI at http://127.0.0.1:8080/ (root=...)
+```
+
+Open the URL. The browse page lists every `.jsonl` / `.json` trace under
+`--root`. Click any file to see the tree (HTML5 `<details>` for
+collapsible request/response). The nav bar's **Diff** tab opens a
+side-by-side picker; **Replay** opens the step-cutoff form.
+
+The web replay uses `MockProvider` only — deterministic, zero network.
+Live API replay (`--live`, `--live-tools`) stays CLI-only on purpose:
+clearer audit trail, no accidental token spend through a checkbox.
+
+JSON endpoints exist for every page (`/api/run`, `/api/stats`,
+`/api/diff`) so you can pipe out canonical / stats / diff JSON over HTTP
+without leaving the script you started in.

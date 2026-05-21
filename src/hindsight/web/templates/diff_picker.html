@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Diff — Hindsight{% endblock %}
+{% block content %}
+<h1>Diff two runs</h1>
+<form class="picker" action="/diff/result" method="get">
+  <label>Baseline (A)
+    <select name="a" required>
+      {% for f in files %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Compare against (B)
+    <select name="b" required>
+      {% for f in files %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="checkbox">
+    <input type="checkbox" name="strict" value="true" />
+    Strict (also compare tokens / latency)
+  </label>
+  <button type="submit">Diff</button>
+</form>
+{% endblock %}

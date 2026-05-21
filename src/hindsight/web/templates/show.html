@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ path }} — Hindsight{% endblock %}
+{% block content %}
+<h1>
+  {% if is_replay %}<span class="replay-badge">REPLAY</span>{% endif %}
+  <code>{{ path }}</code>
+</h1>
+<div class="show-grid">
+  <section class="tree-pane">
+    {{ tree_html | safe }}
+  </section>
+  <aside class="stats-pane">
+    <h2>Stats</h2>
+    <dl class="stats">
+      <dt>Steps</dt><dd>{{ stats.step_count }}</dd>
+      <dt>Tokens in / out</dt><dd>{{ stats.tokens.in }} / {{ stats.tokens.out }}</dd>
+      <dt>Total latency</dt><dd>{{ stats.latency_ms.total }} ms</dd>
+      <dt>p50 / p95</dt><dd>{{ stats.latency_ms.p50 }} / {{ stats.latency_ms.p95 }} ms</dd>
+      <dt>Errors</dt><dd>{{ stats.error_count }}</dd>
+    </dl>
+
+    {% if stats.per_kind %}
+    <h3>By kind</h3>
+    <ul class="kv-list">
+      {% for k, n in stats.per_kind.items() %}
+      <li><span class="k">{{ k }}</span> <span class="v">{{ n }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if stats.per_model %}
+    <h3>By model</h3>
+    <ul class="kv-list">
+      {% for m, info in stats.per_model.items() %}
+      <li><span class="k">{{ m }}</span>
+        <span class="v">{{ info.calls }} call(s) · {{ info.tokens_in }} in / {{ info.tokens_out }} out</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h3>Actions</h3>
+    <ul class="actions">
+      <li><a href="/replay?path={{ path }}">Replay from a step</a></li>
+      <li><a href="/api/run?path={{ path }}">Canonical JSON</a></li>
+      <li><a href="/api/stats?path={{ path }}">Stats JSON</a></li>
+    </ul>
+  </aside>
+</div>
+{% endblock %}

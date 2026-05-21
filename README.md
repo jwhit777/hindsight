@@ -194,6 +194,24 @@ jobs:
 conformance, 2 on schema violation, 1 on missing file. Use it as a cheap
 first-pass check before the diff.
 
+## Browse in a web UI
+
+For traces deeper than the terminal can comfortably render, Hindsight
+ships an opt-in local web UI:
+
+```bash
+pip install 'hindsight-trace[web]'
+hindsight serve --root ./fixtures
+# → open http://127.0.0.1:8080/
+```
+
+The UI lists every `.jsonl` / `.json` trace under `--root`, renders any
+of them as an HTML tree with a stats sidebar, diffs two of them
+side-by-side, and replays from any step (MockProvider only on the web
+path — live API replay stays in the CLI for clear audit trails). Server
+binds to `127.0.0.1` by default; all path inputs are bounded to `--root`.
+Zero JavaScript, zero build step.
+
 ## What ships next
 
 See [`PLAN.md`](./PLAN.md). Three concrete next items, independent:

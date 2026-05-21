@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Diff {{ a }} vs {{ b }} — Hindsight{% endblock %}
+{% block content %}
+<h1>Diff: <code>{{ a }}</code> vs <code>{{ b }}</code>
+  {% if strict %}<span class="badge">strict</span>{% endif %}
+</h1>
+<p class="diff-summary">
+  matched <strong>{{ d.matched }}</strong> ·
+  only in A <strong>{{ d.only_in_a }}</strong> ·
+  only in B <strong>{{ d.only_in_b }}</strong> ·
+  <span class="status {% if d.is_clean %}clean{% else %}diverged{% endif %}">
+    {% if d.is_clean %}clean{% else %}diverged{% endif %}
+  </span>
+</p>
+
+{% if not d.is_clean %}
+<section class="divergence">
+  <h2>First divergent step</h2>
+  <p>path — <code>{{ d.first_divergent_path | join(' → ') }}</code></p>
+  <p>field — <code>{{ d.first_divergent_field }}</code></p>
+  <div class="side-by-side">
+    <div>
+      <h3>A</h3>
+      {% if a_val_json %}<pre class="json">{{ a_val_json }}</pre>
+      {% else %}<p class="empty">(no value)</p>{% endif %}
+    </div>
+    <div>
+      <h3>B</h3>
+      {% if b_val_json %}<pre class="json">{{ b_val_json }}</pre>
+      {% else %}<p class="empty">(no value)</p>{% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<p class="reason">{{ d.reason }}</p>
+
+<ul class="actions">
+  <li><a href="/api/diff?a={{ a }}&b={{ b }}&strict={{ strict }}">JSON</a></li>
+  <li><a href="/diff">Pick another pair</a></li>
+</ul>
+{% endblock %}

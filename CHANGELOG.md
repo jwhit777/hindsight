@@ -49,6 +49,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   1 = root only, N = up to N levels). Tree-only; silently ignored with
   `--json`.
 
+- **`hindsight serve`** + new `[web]` extra — local FastAPI web UI
+  (browse / show / diff / replay) behind `pip install
+  'hindsight-trace[web]'`. Zero-build HTML, no JS framework, server-
+  rendered Jinja2 with HTML5 `<details>` for collapsible request/response
+  drill-down. Path inputs strict-bounded to `--root` to prevent traversal.
+  Replay on the web path is MockProvider-only by design — `--live` /
+  `--live-tools` stay CLI-only for clear audit trails. The `hindsight.web`
+  module is opt-in; core remains stdlib-only.
+
 ### Changed
 - **`__version__`** now read from package metadata via `importlib.metadata`
   rather than a literal string; eliminates version-drift class of bugs.

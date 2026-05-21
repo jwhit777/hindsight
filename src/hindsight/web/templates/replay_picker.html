@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Replay {{ path }} — Hindsight{% endblock %}
+{% block content %}
+<h1>Replay <code>{{ path }}</code></h1>
+<p class="note">
+  This uses the <strong>deterministic MockProvider</strong> — no network,
+  no API calls. Live providers (Anthropic, OpenAI) are CLI-only by design
+  in v0.1.
+</p>
+<form class="picker" action="/replay" method="post">
+  <input type="hidden" name="path" value="{{ path }}" />
+  <label>From step
+    <select name="from_step" required>
+      {% for sid, sname, skind in steps %}
+      <option value="{{ sid }}">{{ sid }} — {{ skind }}: {{ sname }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Model override (optional)
+    <input type="text" name="model" placeholder="e.g. claude-sonnet-4-6" />
+  </label>
+  <button type="submit">Replay</button>
+</form>
+{% endblock %}
