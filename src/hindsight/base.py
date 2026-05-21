@@ -194,6 +194,7 @@ def _register_builtins() -> None:
     from .ingest_langfuse import ingest as _ingest_langfuse_fn  # noqa: PLC0415
     from .ingest_langsmith import ingest as _ingest_langsmith_fn  # noqa: PLC0415
     from .ingest_otel import ingest as _ingest_otel_fn  # noqa: PLC0415
+    from .ingest_subagent_bench import ingest as _ingest_sab_fn  # noqa: PLC0415
 
     INGESTERS.append(_ShimIngester("jsonl", ".jsonl", _ingest_jsonl_fn))
 
@@ -214,12 +215,22 @@ def _register_builtins() -> None:
         )
     )
 
+    # Sub-Agent Bench — top-level "orchestrator" + "sab_version" disambiguates.
+    INGESTERS.append(
+        _JsonShimIngester(
+            name="subagent_bench",
+            fn=_ingest_sab_fn,
+            required_keys={"orchestrator", "sab_version"},
+            forbidden_keys={"resourceSpans", "observations"},
+        )
+    )
+
     INGESTERS.append(
         _JsonShimIngester(
             name="langsmith",
             fn=_ingest_langsmith_fn,
             required_keys={"id", "run_type"},
-            forbidden_keys={"resourceSpans", "observations"},
+            forbidden_keys={"resourceSpans", "observations", "orchestrator"},
         )
     )
 
