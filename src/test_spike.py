@@ -36,6 +36,7 @@ from hindsight import (
 from hindsight.base import auto_ingest
 from hindsight.canonical import StepKind, TraceRun, TraceStep
 from hindsight.ingest_langfuse import ingest as ingest_langfuse
+from hindsight.ingest_subagent_bench import ingest as ingest_subagent_bench
 from hindsight.stats import stats
 
 FIX = ROOT.parent / "fixtures"
@@ -108,6 +109,7 @@ class SpikeTests(unittest.TestCase):
         b = ingest_langsmith(FIX / "langsmith_good.json")
         c = ingest_otel(FIX / "otel_good.json")
         d = ingest_langfuse(FIX / "langfuse_good.json")
+        e = ingest_subagent_bench(FIX / "subagent_bench_good.json")
         self.assertEqual(
             _normalize(a), _normalize(b),
             "JSONL and LangSmith produced different structural payloads",
@@ -119,6 +121,10 @@ class SpikeTests(unittest.TestCase):
         self.assertEqual(
             _normalize(a), _normalize(d),
             "JSONL and Langfuse produced different structural payloads",
+        )
+        self.assertEqual(
+            _normalize(a), _normalize(e),
+            "JSONL and Sub-Agent Bench produced different structural payloads",
         )
 
     # ---- B: lossless round-trip ----
@@ -259,10 +265,11 @@ class SpikeTests(unittest.TestCase):
         TraceRun to the direct adapter call.
         """
         pairs = [
-            (FIX / "canonical_good.jsonl", ingest_jsonl),
-            (FIX / "langsmith_good.json",  ingest_langsmith),
-            (FIX / "otel_good.json",       ingest_otel),
-            (FIX / "langfuse_good.json",   ingest_langfuse),
+            (FIX / "canonical_good.jsonl",      ingest_jsonl),
+            (FIX / "langsmith_good.json",       ingest_langsmith),
+            (FIX / "otel_good.json",            ingest_otel),
+            (FIX / "langfuse_good.json",        ingest_langfuse),
+            (FIX / "subagent_bench_good.json",  ingest_subagent_bench),
         ]
         for path, direct_fn in pairs:
             with self.subTest(fixture=path.name):
@@ -273,6 +280,18 @@ class SpikeTests(unittest.TestCase):
                     _normalize(via_direct),
                     f"auto_ingest diverged from direct call for {path.name}",
                 )
+
+
+    # ---- L: Sub-Agent Bench round-trip ----
+
+    def test_L_subagent_bench_round_trip(self):
+        """SAB fixture round-trips losslessly through to_jsonl / from_jsonl."""
+        e = ingest_subagent_bench(FIX / "subagent_bench_good.json")
+        serialized = e.to_jsonl()
+        e2 = TraceRun.from_jsonl(serialized)
+        e2.validate()
+        self.assertEqual(_normalize(e), _normalize(e2))
+        self.assertEqual(serialized, e2.to_jsonl())
 
 
 if __name__ == "__main__":
