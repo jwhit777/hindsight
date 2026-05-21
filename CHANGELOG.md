@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`scripts/capture_otel_anthropic.py`** — reproducible OTEL-GenAI capture
+  script. Instruments the Anthropic SDK with
+  `opentelemetry-instrumentation-anthropic`, issues one short
+  `claude-haiku-4-5` call, and serializes the resulting spans into the
+  OTLP `resourceSpans[]` JSON shape that `hindsight.ingest_otel` reads.
+  Operator-run only — requires `ANTHROPIC_API_KEY`; does not ship a
+  captured fixture. Lets users with their own API keys validate the OTEL
+  adapter against real captured spans rather than the hand-written
+  `fixtures/otel_good.json`.
+
 ## [0.2.0] - 2026-05-21
 
 ### Added
