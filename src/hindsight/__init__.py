@@ -8,6 +8,7 @@ from .diff import Divergence, diff
 from .ingest_jsonl import ingest as ingest_jsonl
 from .ingest_langsmith import ingest as ingest_langsmith
 from .ingest_otel import ingest as ingest_otel
+from .replay import AnthropicProvider, MockProvider, Provider, replay
 from .show import show
 from .stats import stats
 
@@ -22,6 +23,10 @@ __all__ = [
     "stats",
     "diff",
     "Divergence",
+    "replay",
+    "Provider",
+    "MockProvider",
+    "AnthropicProvider",
 ]
 
 __version__ = "0.0.1"

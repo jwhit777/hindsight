@@ -12,7 +12,8 @@ import json
 import pathlib
 import sys
 
-from . import diff, ingest_jsonl, ingest_langsmith, ingest_otel, show
+from . import diff, ingest_jsonl, ingest_langsmith, ingest_otel, replay, show
+from .canonical import TraceRun
 from .diff import diff_markdown
 from .stats import stats, stats_markdown
 
@@ -53,6 +54,13 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_diff.add_argument("b")
     sp_diff.add_argument("--md", action="store_true", help="Emit Markdown instead of JSON.")
 
+    sp_rep = sub.add_parser("replay", help="Replay a run from step N onward.")
+    sp_rep.add_argument("path")
+    sp_rep.add_argument("--from-step", required=True, help="Step id or numeric index to resume from.")
+    sp_rep.add_argument("--model", help="Override model on LLM steps in the replayed tail.")
+    sp_rep.add_argument("--live", action="store_true", help="Use AnthropicProvider (requires ANTHROPIC_API_KEY + anthropic extra).")
+    sp_rep.add_argument("--out", help="Write replayed canonical to PATH (JSONL); default stdout JSONL.")
+
     return p
 
 
@@ -76,6 +84,21 @@ def main(argv: list[str] | None = None) -> int:
             print(diff_markdown(d))
         else:
             print(json.dumps(d.to_dict(), indent=2, sort_keys=True, default=str))
+        return 0
+
+    if args.cmd == "replay":
+        run = _auto_ingest(pathlib.Path(args.path))
+        from_step: str | int = args.from_step
+        try:
+            from_step = int(args.from_step)
+        except ValueError:
+            pass
+        replayed: TraceRun = replay(run, from_step, model=args.model, live=args.live)
+        out_text = replayed.to_jsonl()
+        if args.out:
+            pathlib.Path(args.out).write_text(out_text)
+        else:
+            sys.stdout.write(out_text)
         return 0
 
     return 2
