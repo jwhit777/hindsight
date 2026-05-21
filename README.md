@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml/badge.svg)](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/hindsight-trace.svg)](https://pypi.org/project/hindsight-trace/) [![Python](https://img.shields.io/badge/python-3.10+-blue)]() [![License](https://img.shields.io/badge/license-Apache_2.0-green)]()
 
-**Project status:** Day 0 — overnight spike complete (2026-05-15). v0.1 in progress. See [`PLAN.md`](./PLAN.md), [`SPIKE.md`](./SPIKE.md), and [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md).
+**Project status:** v0.1.0 shipped (2026-05-21). See [`PLAN.md`](./PLAN.md), [`CHANGELOG.md`](./CHANGELOG.md), and [`SPIKE.md`](./SPIKE.md).
 
 > **Install today** *(v0.1 ships to PyPI shortly; until then, install from source):*
 > ```bash
@@ -63,26 +63,9 @@ Three independent curves converge here:
 
 ---
 
-## Where this fits in Justin's portfolio
-
-This is the fourth project in a deliberately-stacked FDE portfolio.
-
-| Project | Layer | Mode | Output |
-|---|---|---|---|
-| [Sub-Agent Bench](../2026-05-12-fde-portfolio/) | Orchestrator + sub-agents | Offline eval | Routing accuracy, per-sub-agent quality, κ-calibrated judge |
-| [MCP Probe](../2026-05-13-fde-portfolio/) | MCP protocol | Offline scan | Trust report, prompt-injection / schema / tool-poisoning probes |
-| [Skillsmith](../2026-05-14-fde-portfolio/) | Agent Skills | Offline eval | Trigger precision/recall, cross-skill confusion, autotune loop |
-| **Hindsight** (this) | **Runtime traces** | **Post-hoc + replay** | **Step-through, diff, branch-from-step, deployment-pattern catalog** |
-
-The first three are offline pre-deployment evals; Hindsight is the runtime post-deployment debugger. Together they match every bullet of the Anthropic Forward Deployed Engineer posting: *"deliver technical artifacts for customers like MCP servers, sub-agents, and agent skills … identify and codify repeatable deployment patterns and contribute insights back to our Product and Engineering teams"* ([Greenhouse 4985877008](https://job-boards.greenhouse.io/anthropic/jobs/4985877008)).
-
-The 90-day deliverable for Hindsight is the **deployment-pattern catalog** — a publicly shared library of recurring agent-failure Hindsight diffs with diagnoses and fix recipes. That artifact is the literal *thing* the FDE bullet asks for.
-
----
-
 ## Architecture (one paragraph)
 
-A trace from any supported source is parsed by a format-specific *ingester* into the canonical `TraceRun` dataclass tree. Each `TraceStep` is one of {`AGENT`, `LLM`, `TOOL`, `DECISION`} and carries `request`, `response`, `latency_ms`, `tokens_in/out`, `parent_id`, plus a free-form `extra` dict for adapter-local fields. Operations are pure functions over `TraceRun`: `show()` walks the tree, `stats()` aggregates, `diff(a, b)` aligns step-by-step and reports the first divergence, `replay(run, from_step, model_override)` re-emits requests live from step *n* onward. The optional web UI (Phase 2) is a FastAPI server that re-uses the same library; nothing in the core talks HTTP unless `--live` is passed. The spike (this overnight build) implements ingest from 3 formats + `show` + `stats` + `diff` against fixtures, with self-tests covering schema round-trip, cross-format identity, and divergence detection. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full diagram.
+A trace from any supported source is parsed by a format-specific *ingester* into the canonical `TraceRun` dataclass tree. Each `TraceStep` is one of {`AGENT`, `LLM`, `TOOL`, `DECISION`} and carries `request`, `response`, `latency_ms`, `tokens_in/out`, `parent_id`, plus a free-form `extra` dict for adapter-local fields. Operations are pure functions over `TraceRun`: `show()` walks the tree, `stats()` aggregates, `diff(a, b)` aligns step-by-step and reports the first divergence, `replay(run, from_step, model_override)` re-emits requests live from step *n* onward. The optional web UI (Phase 2) is a FastAPI server that re-uses the same library; nothing in the core talks HTTP unless `--live` is passed. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full diagram.
 
 ---
 
@@ -97,8 +80,7 @@ A trace from any supported source is parsed by a format-specific *ingester* into
 ├── ARCHITECTURE.md          ← system diagram + data shapes + failure modes
 ├── EVALS.md                 ← what gets tested, what counts as "good enough"
 ├── DEMO-PLAN.md             ← 5-minute interview demo script
-├── SPIKE.md                 ← what the overnight spike proved (+ output)
-├── FIRST-4-HOURS.md         ← Day-1 step-by-step
+├── SPIKE.md                 ← what the spike proved (+ output)
 ├── elevator-pitch.md        ← 60-second verbal pitch
 ├── cover-letter-snippet.md  ← 2-paragraph cover-letter fragment
 ├── CLAUDE-CODE-PROMPT.md    ← copy-paste handoff prompt for Claude Code
@@ -121,20 +103,20 @@ A trace from any supported source is parsed by a format-specific *ingester* into
 │   │   ├── stats.py
 │   │   ├── diff.py
 │   │   └── cli.py           ← argparse entrypoint
-│   ├── spike_run.py         ← the overnight runnable end-to-end
+│   ├── spike_run.py         ← runnable end-to-end
 │   └── test_spike.py        ← 10 self-test assertions
 └── runs/                    ← captured spike output for inspection
 ```
 
-## Quickstart (after Day 1)
+## Quickstart
 
 ```
 cd src/
-python3 spike_run.py        # runs the overnight spike end-to-end
+python3 spike_run.py        # runs the spike end-to-end
 python3 test_spike.py       # 10 self-test assertions
 ```
 
-## What's already done overnight (Day 0)
+## What's already done
 
 * Canonical schema written, 4 step types, lossless JSONL round-trip.
 * Three ingesters (JSONL, LangSmith-export shape, OTEL GenAI span shape) writing into the same canonical.
@@ -144,7 +126,7 @@ python3 test_spike.py       # 10 self-test assertions
 * `test_spike.py` — 10 assertions covering cross-format identity, round-trip, divergence detection, stats math, tree depth handling.
 * All tests pass; total spike runtime is single-digit milliseconds.
 
-Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md). Reproduction command in [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md).
+Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md).
 
 ## Use in CI
 
@@ -176,8 +158,8 @@ first-pass check before the diff.
 
 ## What ships next
 
-See [`PLAN.md`](./PLAN.md) and [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md). Short version: tomorrow morning, push the repo public, confirm CI, then implement a real OTEL-GenAI-instrumented Anthropic SDK call and ingest its output through Hindsight to close the demo loop.
+See [`PLAN.md`](./PLAN.md). Short version: flip the repo public, then implement a real OTEL-GenAI-instrumented Anthropic SDK call and ingest its output through Hindsight to close the demo loop.
 
 ## License
 
-Apache 2.0. See `LICENSE` (to be added Day 1).
+Apache 2.0. See [`LICENSE`](./LICENSE).
