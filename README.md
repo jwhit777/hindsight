@@ -146,6 +146,34 @@ python3 test_spike.py       # 10 self-test assertions
 
 Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md). Reproduction command in [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md).
 
+## Use in CI
+
+`hindsight ci diff` is the PR-check variant of `diff`. With `--gate`, it
+exits 1 on any divergence — drop it into a GitHub Actions step and a PR
+that regresses a known-good trace fails before merge.
+
+```yaml
+# .github/workflows/regression-gate.yml
+name: trace-regression
+on: [pull_request]
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install hindsight-trace
+      - name: Run the agent and capture a trace
+        run: python scripts/run_agent.py > runs/head.jsonl
+      - name: Gate the PR on the cross-run diff
+        run: hindsight ci diff baseline/good.jsonl runs/head.jsonl --gate --md
+```
+
+`hindsight validate <path>` is the lighter companion — exits 0 on canonical
+conformance, 2 on schema violation, 1 on missing file. Use it as a cheap
+first-pass check before the diff.
+
 ## What ships next
 
 See [`PLAN.md`](./PLAN.md) and [`FIRST-4-HOURS.md`](./FIRST-4-HOURS.md). Short version: tomorrow morning, push the repo public, confirm CI, then implement a real OTEL-GenAI-instrumented Anthropic SDK call and ingest its output through Hindsight to close the demo loop.
