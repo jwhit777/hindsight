@@ -12,12 +12,27 @@ authors = [{name = "Justin Whitcomb", email = "jwhitua@gmail.com"}]
 license = {text = "Apache-2.0"}
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Debuggers",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Logging",
+]
+keywords = [
+    "llm",
+    "agents",
+    "observability",
+    "tracing",
+    "opentelemetry",
+    "langsmith",
+    "langfuse",
+    "debugging",
+    "replay",
+    "trace",
 ]
 
 [project.scripts]
@@ -29,7 +44,11 @@ otel = ["opentelemetry-sdk>=1.27.0", "opentelemetry-instrumentation-anthropic>=0
 dev = ["ruff>=0.4.0", "mypy>=1.10.0"]
 
 [project.urls]
+Homepage = "https://github.com/jwhit777/hindsight"
 Repository = "https://github.com/jwhit777/hindsight"
+Issues = "https://github.com/jwhit777/hindsight/issues"
+Changelog = "https://github.com/jwhit777/hindsight/blob/main/CHANGELOG.md"
+"Release Notes" = "https://github.com/jwhit777/hindsight/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hindsight"]
