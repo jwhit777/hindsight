@@ -33,7 +33,9 @@ from hindsight import (
     ingest_otel,
     show,
 )
+from hindsight.base import auto_ingest
 from hindsight.canonical import StepKind, TraceRun, TraceStep
+from hindsight.ingest_langfuse import ingest as ingest_langfuse
 from hindsight.stats import stats
 
 FIX = ROOT.parent / "fixtures"
@@ -105,6 +107,7 @@ class SpikeTests(unittest.TestCase):
         a = ingest_jsonl(FIX / "canonical_good.jsonl")
         b = ingest_langsmith(FIX / "langsmith_good.json")
         c = ingest_otel(FIX / "otel_good.json")
+        d = ingest_langfuse(FIX / "langfuse_good.json")
         self.assertEqual(
             _normalize(a), _normalize(b),
             "JSONL and LangSmith produced different structural payloads",
@@ -112,6 +115,10 @@ class SpikeTests(unittest.TestCase):
         self.assertEqual(
             _normalize(a), _normalize(c),
             "JSONL and OTEL produced different structural payloads",
+        )
+        self.assertEqual(
+            _normalize(a), _normalize(d),
+            "JSONL and Langfuse produced different structural payloads",
         )
 
     # ---- B: lossless round-trip ----
@@ -232,6 +239,40 @@ class SpikeTests(unittest.TestCase):
         run = TraceRun(id="x", source="jsonl", steps=steps)
         with self.assertRaises(ValueError):
             run.validate()
+
+    # ---- J: Langfuse round-trip ----
+
+    def test_J_langfuse_round_trip(self):
+        """Langfuse fixture round-trips losslessly through to_jsonl / from_jsonl."""
+        d = ingest_langfuse(FIX / "langfuse_good.json")
+        serialized = d.to_jsonl()
+        d2 = TraceRun.from_jsonl(serialized)
+        d2.validate()
+        self.assertEqual(_normalize(d), _normalize(d2))
+        # Byte-identical round-trip.
+        self.assertEqual(serialized, d2.to_jsonl())
+
+    # ---- K: plugin protocol dispatch ----
+
+    def test_K_plugin_protocol_dispatch(self):
+        """auto_ingest() on each of the four fixtures returns an equivalent
+        TraceRun to the direct adapter call.
+        """
+        pairs = [
+            (FIX / "canonical_good.jsonl", ingest_jsonl),
+            (FIX / "langsmith_good.json",  ingest_langsmith),
+            (FIX / "otel_good.json",       ingest_otel),
+            (FIX / "langfuse_good.json",   ingest_langfuse),
+        ]
+        for path, direct_fn in pairs:
+            with self.subTest(fixture=path.name):
+                via_auto   = auto_ingest(path)
+                via_direct = direct_fn(path)
+                self.assertEqual(
+                    _normalize(via_auto),
+                    _normalize(via_direct),
+                    f"auto_ingest diverged from direct call for {path.name}",
+                )
 
 
 if __name__ == "__main__":
