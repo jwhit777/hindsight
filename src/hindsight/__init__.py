@@ -10,7 +10,7 @@ from .ingest_jsonl import ingest as ingest_jsonl
 from .ingest_langfuse import ingest as ingest_langfuse
 from .ingest_langsmith import ingest as ingest_langsmith
 from .ingest_otel import ingest as ingest_otel
-from .replay import AnthropicProvider, MockProvider, Provider, replay
+from .replay import AnthropicProvider, MockProvider, OpenAIProvider, Provider, replay
 from .show import show
 from .stats import stats
 
@@ -30,6 +30,7 @@ __all__ = [
     "Provider",
     "MockProvider",
     "AnthropicProvider",
+    "OpenAIProvider",
     "BaseIngester",
     "auto_ingest",
     "register",
