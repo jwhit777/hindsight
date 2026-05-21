@@ -173,6 +173,50 @@ class SpikeTests(unittest.TestCase):
         )
         self.assertEqual(d.first_divergent_field, "response")
 
+    # ---- C4 / C5: strict-mode catches token / latency divergence ----
+
+    def test_C4_tokens_diff_only_in_strict_mode(self):
+        good = ingest_jsonl(FIX / "canonical_token_div_good.jsonl")
+        bad = ingest_jsonl(FIX / "canonical_token_div_bad.jsonl")
+        # Default diff: tokens_out is not in _DEFAULT_FIELDS, so clean.
+        self.assertTrue(diff(good, bad).is_clean)
+        # Strict diff: tokens_out is compared and diverges at s5 (llm:analyse).
+        d = diff(good, bad, strict=True)
+        self.assertFalse(d.is_clean)
+        self.assertEqual(d.first_divergent_field, "tokens_out")
+        self.assertEqual(d.first_divergent_path[-1], "llm:analyse")
+
+    def test_C5_latency_diff_only_in_strict_mode(self):
+        good = ingest_jsonl(FIX / "canonical_latency_div_good.jsonl")
+        bad = ingest_jsonl(FIX / "canonical_latency_div_bad.jsonl")
+        # Default diff: clean (latency_ms not in default fields).
+        self.assertTrue(diff(good, bad).is_clean)
+        # Strict diff: latency_ms diverges at s5.
+        d = diff(good, bad, strict=True)
+        self.assertFalse(d.is_clean)
+        self.assertEqual(d.first_divergent_field, "latency_ms")
+        self.assertEqual(d.first_divergent_path[-1], "llm:analyse")
+
+    def test_C6_default_diff_ignores_strict_fields_on_good_pair(self):
+        # Sanity guard: identical runs are clean in both modes.
+        good = ingest_jsonl(FIX / "canonical_good.jsonl")
+        again = ingest_jsonl(FIX / "canonical_good.jsonl")
+        self.assertTrue(diff(good, again).is_clean)
+        self.assertTrue(diff(good, again, strict=True).is_clean)
+
+    def test_C7_strict_mode_still_catches_routing_divergence(self):
+        # Strict mode adds fields; it does not remove or replace the default set.
+        # The existing router divergence (response field) must still fire.
+        good = ingest_jsonl(FIX / "canonical_good.jsonl")
+        bad = ingest_jsonl(FIX / "canonical_bad.jsonl")
+        d = diff(good, bad, strict=True)
+        self.assertFalse(d.is_clean)
+        self.assertEqual(d.first_divergent_field, "response")
+        self.assertEqual(
+            d.first_divergent_path,
+            ["agent:orchestrator", "llm:router"],
+        )
+
     # ---- D: stats math ----
 
     def test_D_stats_math(self):
