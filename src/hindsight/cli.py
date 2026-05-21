@@ -12,11 +12,18 @@ import json
 import pathlib
 import sys
 
-from . import diff, replay, show
-from .base import auto_ingest
+from . import __version__, diff, replay, show
+from .base import INGESTERS, auto_ingest
 from .canonical import TraceRun
 from .diff import diff_markdown
 from .stats import stats, stats_markdown
+
+
+def _non_neg_int(s: str) -> int:
+    n = int(s)
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"depth must be >= 0, got {n}")
+    return n
 
 
 def _auto_ingest(path: pathlib.Path):
@@ -33,12 +40,23 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="hindsight",
         description="Flight recorder + replay debugger for LLM agents.",
     )
+    p.add_argument(
+        "--version", action="version", version=f"hindsight {__version__}"
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp_show = sub.add_parser("show", help="Render a trace as a tree.")
     sp_show.add_argument("path")
     sp_show.add_argument("--no-color", action="store_true", help="Disable ANSI colors.")
     sp_show.add_argument("--verbose", "-v", action="store_true", help="Include extra fields.")
+    sp_show.add_argument(
+        "--json", action="store_true",
+        help="Emit canonical JSONL instead of the tree (useful for piping / format conversion).",
+    )
+    sp_show.add_argument(
+        "--depth", type=_non_neg_int, default=None,
+        help="Cap tree depth (0 = header only, 1 = root only, N = up to N levels). Tree-only; ignored with --json.",
+    )
 
     sp_stats = sub.add_parser("stats", help="Aggregate stats for a run.")
     sp_stats.add_argument("path")
@@ -73,6 +91,9 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_validate = sub.add_parser("validate", help="Check canonical-schema conformance of a trace.")
     sp_validate.add_argument("path")
 
+    # version — rich version + adapter list
+    sub.add_parser("version", help="Print hindsight version, registered ingesters, and replay providers.")
+
     return p
 
 
@@ -81,8 +102,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "show":
         run = _auto_ingest(pathlib.Path(args.path))
+        if args.json:
+            sys.stdout.write(run.to_jsonl())
+            return 0
         color = not args.no_color and sys.stdout.isatty()
-        print(show(run, color=color, verbose=args.verbose))
+        print(show(run, color=color, verbose=args.verbose, max_depth=args.depth))
         return 0
 
     if args.cmd == "stats":
@@ -138,6 +162,16 @@ def main(argv: list[str] | None = None) -> int:
             if args.gate and not d.is_clean:
                 return 1
             return 0
+
+    if args.cmd == "version":
+        ingester_names = ", ".join(i.name for i in INGESTERS) or "(none)"
+        provider_names = "mock, anthropic, openai"
+        py = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        print(f"hindsight {__version__}")
+        print(f"Python {py} on {sys.platform}")
+        print(f"Registered ingesters: {ingester_names}")
+        print(f"Replay providers: {provider_names}")
+        return 0
 
     if args.cmd == "validate":
         path = pathlib.Path(args.path)

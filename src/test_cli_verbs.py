@@ -176,6 +176,71 @@ class ValidateTests(unittest.TestCase):
         self.assertIn("steps", result.stdout)
         self.assertIn("kinds", result.stdout)
 
+    # ---- version verbs ----
+
+    def test_top_level_version_flag(self):
+        """`hindsight --version` exits 0 and stdout starts with 'hindsight '."""
+        result = _run("--version")
+        self.assertEqual(result.returncode, 0, f"stderr={result.stderr}")
+        self.assertTrue(
+            result.stdout.startswith("hindsight "),
+            f"expected stdout to start with 'hindsight ', got {result.stdout!r}",
+        )
+
+    def test_version_subcommand(self):
+        """`hindsight version` lists version + each registered ingester name."""
+        result = _run("version")
+        self.assertEqual(result.returncode, 0, f"stderr={result.stderr}")
+        self.assertIn("hindsight ", result.stdout)
+        for name in ("jsonl", "otel", "langfuse", "langsmith", "subagent_bench"):
+            self.assertIn(name, result.stdout, f"missing ingester {name!r} in version output")
+        # And the three replay providers.
+        for prov in ("mock", "anthropic", "openai"):
+            self.assertIn(prov, result.stdout)
+
+    # ---- show --json ----
+
+    def test_show_json_emits_canonical_jsonl(self):
+        """`hindsight show <path> --json` round-trips through ingest_jsonl."""
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT))
+        from hindsight.canonical import TraceRun  # noqa: PLC0415
+        from hindsight.ingest_jsonl import ingest as _ingest  # noqa: PLC0415
+
+        result = _run("show", str(FIX / "canonical_good.jsonl"), "--json")
+        self.assertEqual(result.returncode, 0, f"stderr={result.stderr}")
+        # Stdout should parse back into a TraceRun matching the original.
+        replayed = TraceRun.from_jsonl(result.stdout)
+        replayed.validate()
+        original = _ingest(FIX / "canonical_good.jsonl")
+        self.assertEqual(len(replayed.steps), len(original.steps))
+        self.assertEqual(replayed.id, original.id)
+
+    # ---- show --depth ----
+
+    def test_show_depth_caps_tree(self):
+        """`hindsight show --depth 1` shows fewer lines than the unbounded form
+        and omits the deep nested step names."""
+        full = _run("show", "--no-color", str(FIX / "canonical_good.jsonl"))
+        capped = _run("show", "--no-color", str(FIX / "canonical_good.jsonl"), "--depth", "1")
+        self.assertEqual(full.returncode, 0)
+        self.assertEqual(capped.returncode, 0)
+        self.assertLess(
+            len(capped.stdout.splitlines()), len(full.stdout.splitlines()),
+            "capped output should have fewer lines than unbounded",
+        )
+        # The nested stock-analyst subtree should NOT appear at depth 1.
+        self.assertNotIn("stock-analyst", capped.stdout)
+        self.assertNotIn("analyse", capped.stdout)
+        # But the root agent should.
+        self.assertIn("orchestrator", capped.stdout)
+
+    def test_show_depth_rejects_negative(self):
+        """`hindsight show --depth -1` fails argparse validation (exit 2)."""
+        result = _run("show", str(FIX / "canonical_good.jsonl"), "--depth", "-1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("depth must be", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

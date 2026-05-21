@@ -38,8 +38,19 @@ def _paint(text: str, color: str, enable: bool) -> str:
     return f"{color}{text}{_RESET}"
 
 
-def show(run: TraceRun, *, color: bool = True, verbose: bool = False) -> str:
-    """Returns a multi-line string representation of the run tree."""
+def show(
+    run: TraceRun,
+    *,
+    color: bool = True,
+    verbose: bool = False,
+    max_depth: int | None = None,
+) -> str:
+    """Returns a multi-line string representation of the run tree.
+
+    `max_depth` caps the tree-walker: 0 = no steps (header only), 1 = root
+    step only, N = up to N levels deep. None (default) = no limit. The
+    run header and summary are always printed.
+    """
     lines: list[str] = []
     lines.append(
         _paint(f"run {run.id}  source={run.source}", _BOLD, color)
@@ -54,6 +65,8 @@ def show(run: TraceRun, *, color: bool = True, verbose: bool = False) -> str:
     lines.append("")
 
     for depth, step in run.walk_tree():
+        if max_depth is not None and depth >= max_depth:
+            continue
         indent = "  " * depth
         icon = _paint(_KIND_ICON[step.kind], _KIND_COLOR[step.kind], color)
         name = step.name

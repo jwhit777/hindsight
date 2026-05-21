@@ -39,6 +39,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `.github/pull_request_template.md`, expanded `pyproject.toml` classifiers
   / keywords / project URLs, and `Makefile` `install`/`dev`/`dev-live`/
   `publish-test`/`publish` targets.
+- **`hindsight version`** subcommand + top-level `--version` — prints
+  version (read from `importlib.metadata` so it can't drift from
+  `pyproject.toml`), Python version, registered ingesters, replay providers.
+- **`hindsight show --json`** — emit canonical JSONL instead of the tree;
+  one-liner for cross-format conversion (`hindsight show otel.json --json >
+  canonical.jsonl`).
+- **`hindsight show --depth N`** — cap tree depth (0 = header only,
+  1 = root only, N = up to N levels). Tree-only; silently ignored with
+  `--json`.
+
+### Changed
+- **`__version__`** now read from package metadata via `importlib.metadata`
+  rather than a literal string; eliminates version-drift class of bugs.
 
 ### Changed
 - **Test count: 39** across `test_spike.py` (18), `test_replay.py` (12),

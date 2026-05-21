@@ -137,7 +137,7 @@ hindsight/
 │   │   ├── stats.py
 │   │   ├── diff.py            ← --strict adds tokens / latency to compared fields
 │   │   ├── replay.py          ← record-substitution + --live-tools + lazy live providers
-│   │   └── cli.py             ← argparse: show / stats / diff / replay / ci diff / validate
+│   │   └── cli.py             ← argparse: show (--json/--depth) / stats / diff / replay / ci diff / validate / version
 │   ├── spike_run.py           ← runnable end-to-end demo
 │   ├── test_spike.py          ← 18 schema / ingest / diff tests
 │   ├── test_replay.py         ← 12 replay-engine tests
@@ -157,7 +157,7 @@ python3 -m unittest discover -s . -p 'test_*.py' -v   # 39 tests across 3 suites
 
 * Canonical schema written, 4 step types, lossless JSONL round-trip.
 * Five ingesters (JSONL, LangSmith run-tree, OTEL GenAI, Langfuse, Sub-Agent Bench) writing into the same canonical. Cross-format structural identity is a tested invariant.
-* `show()`, `stats()`, `diff()` (with `--strict` for token / latency regressions), `replay()` (with `--live-tools` opt-in for TOOL re-execution) all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes) and `validate` (schema conformance). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
+* `show()` (with `--json` for canonical-JSONL emission and `--depth N` for tree-depth capping), `stats()`, `diff()` (with `--strict` for token / latency regressions), `replay()` (with `--live-tools` opt-in for TOOL re-execution) all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes), `validate` (schema conformance), and `version` (prints version + adapter / provider list). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
 * `BaseIngester` Protocol — third parties can register new format adapters without touching the core.
 * Fixtures cover three semantic divergence patterns (routing, LLM-content, tool-call), two strict-mode divergence patterns (tokens, latency), and five cross-format identity fixtures (jsonl, langsmith, otel, langfuse, subagent_bench).
 * `spike_run.py` runs end-to-end, prints a calibration-card-style report.

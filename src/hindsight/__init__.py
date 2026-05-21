@@ -1,7 +1,7 @@
-"""Hindsight — flight recorder + replay debugger for LLM agents.
+"""Hindsight — flight recorder + replay debugger for LLM agents."""
 
-Spike build, 2026-05-15. v0.0.1.
-"""
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 
 from .base import INGESTERS, BaseIngester, auto_ingest, register
 from .canonical import StepKind, TraceRun, TraceStep
@@ -39,4 +39,9 @@ __all__ = [
     "INGESTERS",
 ]
 
-__version__ = "0.0.1"
+try:
+    __version__ = _pkg_version("hindsight-trace")
+except PackageNotFoundError:
+    # Running from source without `pip install -e .` (e.g., the spike
+    # driver scripts that sys.path-insert ROOT). Mark explicitly.
+    __version__ = "0.0.0+source"

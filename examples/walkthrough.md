@@ -57,6 +57,25 @@ This is a 7-step agent run: an orchestrator routes to a stock-analyst
 sub-agent, which calls an LLM to analyse and a tool to fetch a quote, then the
 orchestrator summarises.
 
+### Format conversion + depth cap
+
+Pipe the canonical out as JSONL — handy for converting any input format to
+the native form, or for piping into `jq`:
+
+```bash
+hindsight show fixtures/otel_good.json --json > /tmp/canonical.jsonl
+hindsight show fixtures/canonical_good.jsonl --json | jq '.steps[] | select(.kind=="llm")'
+```
+
+For deeply-nested traces, cap the tree depth:
+
+```bash
+hindsight show fixtures/canonical_good.jsonl --depth 1   # root step only
+hindsight show fixtures/canonical_good.jsonl --depth 2   # root + immediate children
+```
+
+`--depth 0` prints the run header without any steps.
+
 Get aggregate stats in Markdown:
 
 ```bash
