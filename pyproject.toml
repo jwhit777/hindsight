@@ -58,10 +58,8 @@ Changelog = "https://github.com/jwhit777/hindsight/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hindsight"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/hindsight/web/templates" = "hindsight/web/templates"
-"src/hindsight/web/static" = "hindsight/web/static"
+# hatchling already includes the .html / .css files under packages by
+# default; no force-include needed.
 
 [tool.ruff]
 line-length = 110
