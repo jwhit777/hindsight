@@ -17,6 +17,19 @@
 
 ---
 
+```
+      production              hindsight
+        ___   ___                ___   ___
+       /   \ /   \              /   \ /   \
+      | ??  | ??  |    ───►    | s6  | s7  |
+       \___/ \___/              \___/ \___/
+     "why did it fail?"     "tool→rate_limited;
+                              retry-loop overflowed
+                              context; hallucinated."
+```
+
+<sub><i>Hindsight is 20/20.</i></sub>
+
 ## The 30-second pitch
 
 Every existing LLM-agent observability tool is hosted SaaS or framework-locked. Langfuse, LangSmith, Arize Phoenix, Helicone, Datadog LLM, and Laminar all want your data on their cloud or your SDK in their flavor. When an Anthropic FDE walks into a Fortune 100 customer with regulated data and an existing OpenTelemetry collector, none of them are a drop-in. The customer's question is *"my agent is failing in production, where did it go wrong?"* — they want a step-by-step view, a way to re-run from the point of failure, and a way to diff a known-good run against the broken one. That's a primitive, not a product.
