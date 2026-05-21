@@ -139,6 +139,19 @@ about 6 ms. It is the first gate before running the full suite.
 `make lint` runs `ruff check src/` with the config in `pyproject.toml`
 (line-length 110, target py310, select E/F/I/W/UP, ignore E501).
 
+### Pre-commit hooks (recommended)
+
+After cloning + `pip install -e .[dev]`, enable the hooks once:
+
+```bash
+pre-commit install
+```
+
+This wires `ruff --fix` and `mypy --ignore-missing-imports` to every
+`git commit`, so the dev loop catches the same things CI does, faster.
+The `typecheck` CI job runs mypy on push; running it locally as a
+pre-commit hook closes that gap.
+
 ---
 
 ## Code style

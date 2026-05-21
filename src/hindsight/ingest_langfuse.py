@@ -143,8 +143,13 @@ def ingest(path: pathlib.Path | str) -> TraceRun:
     root_step_id = f"lf:{trace_id}"
 
     # Determine trace-level start/end from observations if not on the trace.
-    obs_starts = [o.get("startTime") for o in observations if o.get("startTime")]
-    obs_ends = [o.get("endTime") for o in observations if o.get("endTime")]
+    # Narrow to list[str] explicitly so min/max see comparable elements.
+    obs_starts: list[str] = [
+        s for o in observations if isinstance((s := o.get("startTime")), str)
+    ]
+    obs_ends: list[str] = [
+        s for o in observations if isinstance((s := o.get("endTime")), str)
+    ]
     trace_start = trace_ts or (min(obs_starts) if obs_starts else None)
     trace_end = raw.get("endTime") or (max(obs_ends) if obs_ends else None)
 

@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **LAUNCH.md draft** at repo root — not for publication; v0.2 launch post
   outline.
 - **README visual** — small ASCII "Hindsight is 20/20" panel before the pitch.
+- **Pre-commit hooks** (`.pre-commit-config.yaml`) — `ruff --fix` + `mypy`
+  on every commit. Enable with `pre-commit install` after a fresh clone.
+- **mypy CI job** — catches type regressions on push; runs in
+  `--ignore-missing-imports` mode against `src/hindsight/`. Codebase is
+  currently 0 mypy errors.
+- **OSS welcome surface** — `.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md`,
+  `.github/pull_request_template.md`, expanded `pyproject.toml` classifiers
+  / keywords / project URLs, and `Makefile` `install`/`dev`/`dev-live`/
+  `publish-test`/`publish` targets.
 
 ### Changed
 - **Test count: 39** across `test_spike.py` (18), `test_replay.py` (12),

@@ -30,3 +30,15 @@ jobs:
         run: make test PYTHON=python
       - name: Lint (ruff)
         run: make lint PYTHON=python
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install (editable + dev extras)
+        run: python -m pip install -e .[dev]
+      - name: mypy
+        run: python -m mypy --ignore-missing-imports src/hindsight/
