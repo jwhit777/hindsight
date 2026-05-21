@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml/badge.svg)](https://github.com/jwhit777/hindsight/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/hindsight-trace.svg)](https://pypi.org/project/hindsight-trace/) [![Python](https://img.shields.io/badge/python-3.10+-blue)]() [![License](https://img.shields.io/badge/license-Apache_2.0-green)]()
 
-**Project status:** v0.1.0 shipped (2026-05-21). See [`PLAN.md`](./PLAN.md), [`CHANGELOG.md`](./CHANGELOG.md), and [`SPIKE.md`](./SPIKE.md).
+**Project status:** v0.2.0 shipped (2026-05-21) — five ingest adapters, seven CLI verbs, optional FastAPI web UI, 55 tests across four suites. See the [v0.2.0 release](https://github.com/jwhit777/hindsight/releases/tag/v0.2.0), [`CHANGELOG.md`](./CHANGELOG.md), [`PLAN.md`](./PLAN.md), and [`SPIKE.md`](./SPIKE.md).
 
 > **Install today** *(until `hindsight-trace` lands on PyPI; install from source):*
 > ```bash
@@ -36,31 +36,39 @@ Every existing LLM-agent observability tool is hosted SaaS or framework-locked. 
 
 Hindsight is that primitive: a local-first, pip-installable CLI + library that ingests any trace format, normalizes it to a canonical schema, and exposes step-through, diff, and replay-from-step over it. No accounts, no cloud, stdlib Python core.
 
+The four commands below all run verbatim against fixtures in this repo — copy, paste, see the same output:
+
 ```
-$ pip install hindsight-trace
-$ hindsight ingest my-failing-run.jsonl
-  → ingested 23 steps (4 agent · 11 llm · 8 tool) → run_2026-05-15T09-12-44
+$ hindsight show fixtures/canonical_good.jsonl
+run run_good_001  source=jsonl
+  7 steps · 9444 tok in / 1298 tok out · 6940 ms total
 
-$ hindsight show run_2026-05-15T09-12-44
-  ROUTER  → orchestrator/route_to_subagent
-    LLM   ─ claude-haiku-4-5  ▸ 412 tok in / 38 tok out  (180 ms)
-    TOOL  ─ subagent.dispatch("stock-analyst")  (2 ms)
-    AGENT ─ stock-analyst
-      LLM ─ claude-sonnet-4-6  ▸ 8 412 tok in / 1 220 tok out  (4 110 ms)
-      TOOL─ get_quote("AAPL")  → ERROR(rate_limited)             ⚠
-      ... 17 more steps
+AGENT  orchestrator  · 2520 ms
+   LLM   router  · claude-haiku-4-5  · 412 in / 38 out  · 180 ms
+   TOOL  subagent.dispatch  · 2 ms
+    AGENT  stock-analyst  · 2030 ms
+       LLM   analyse  · claude-sonnet-4-6  · 8412 in / 1220 out  · 1880 ms
+       TOOL  get_quote  · 48 ms
+   LLM   summarize  · claude-sonnet-4-6  · 620 in / 40 out  · 280 ms
 
-$ hindsight diff run_GOOD run_BAD
-  divergence at step #6 (TOOL get_quote):
-    GOOD: got_quote → continued to summarise
-    BAD : rate_limited → retried 3x → context overflow → hallucinated quote
+$ hindsight diff fixtures/canonical_good.jsonl fixtures/canonical_bad.jsonl --md
+# Diff report
+- matched pairs — 4
+- only in A — 3
+- only in B — 3
+- clean — False
+**first divergence at path agent:orchestrator → llm:router on field 'response'**
+  A: router  (llm)  value={'choice': 'stock-analyst'}
+  B: router  (llm)  value={'choice': 'news-writer'}
 
-$ hindsight replay run_BAD --from-step 6 --model claude-sonnet-4-6
-  [LIVE] re-running 18 downstream steps with sonnet-4-6 in place of haiku-4-5...
-  → succeeds. 4 270 ms total. 12 580 tok.
+$ hindsight replay fixtures/canonical_good.jsonl --from-step 3 --model claude-sonnet-4-6 --out /tmp/r.jsonl
+$ hindsight show /tmp/r.jsonl    # replayed tree, model swapped on every LLM step in the tail
+
+$ hindsight serve --root ./fixtures        # optional web UI; pip install 'hindsight-trace[web]' first
+Serving hindsight UI at http://127.0.0.1:8080/ (root=…/fixtures)
 ```
 
-That's the whole demo. One Linux box, one trace file, four commands.
+That's the whole demo. One Linux box, one trace file, four commands — five with the web UI.
 
 ---
 
@@ -78,7 +86,19 @@ Three independent curves converge here:
 
 ## Architecture (one paragraph)
 
-A trace from any supported source is parsed by a format-specific *ingester* into the canonical `TraceRun` dataclass tree. Each `TraceStep` is one of {`AGENT`, `LLM`, `TOOL`, `DECISION`} and carries `request`, `response`, `latency_ms`, `tokens_in/out`, `parent_id`, plus a free-form `extra` dict for adapter-local fields. Operations are pure functions over `TraceRun`: `show()` walks the tree, `stats()` aggregates, `diff(a, b)` aligns step-by-step and reports the first divergence, `replay(run, from_step, model_override)` re-emits requests live from step *n* onward. The optional web UI (Phase 2) is a FastAPI server that re-uses the same library; nothing in the core talks HTTP unless `--live` is passed. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full diagram.
+A trace from any supported source is parsed by a format-specific *ingester* into the canonical `TraceRun` dataclass tree. Each `TraceStep` is one of {`AGENT`, `LLM`, `TOOL`, `DECISION`} and carries `request`, `response`, `latency_ms`, `tokens_in/out`, `parent_id`, plus a free-form `extra` dict for adapter-local fields. Operations are pure functions over `TraceRun`: `show()` walks the tree, `stats()` aggregates, `diff(a, b)` aligns step-by-step and reports the first divergence, `replay(run, from_step, model_override)` re-emits requests through a `Provider` (mock by default, Anthropic or OpenAI behind the `[live]` extra) from step *n* onward. The optional web UI is a FastAPI server (behind the `[web]` extra) that re-uses the same library; nothing in the core talks HTTP unless `--live` is passed. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full diagram.
+
+## Supported trace formats
+
+| Format | Detection | Adapter | Notes |
+|---|---|---|---|
+| **JSONL** (canonical) | `.jsonl` suffix | `ingest_jsonl` | Native on-disk form; lossless round-trip via `to_jsonl` / `from_jsonl`. |
+| **LangSmith run-tree** | `.json` with `id` + `run_type` | `ingest_langsmith` | Standard LangSmith export. Vendor-specific fields preserved under `extra["langsmith"]`. |
+| **OpenTelemetry GenAI** | `.json` with `resourceSpans` | `ingest_otel` | Per [OTEL GenAI semconv](https://opentelemetry.io/docs/specs/semconv/gen-ai/). Use `scripts/capture_otel_anthropic.py` to generate a real fixture from a live `claude-haiku-4-5` call. |
+| **Langfuse** | `.json` with `observations` | `ingest_langfuse` | Standard Langfuse trace export. Observation IDs prefixed `lf:` in canonical output to namespace. |
+| **Sub-Agent Bench** | `.json` with `orchestrator` + `sab_version` | `ingest_subagent_bench` | Nested `orchestrator → steps → subagent_call → steps` shape. Demonstrates the plugin protocol with a real third-party-shaped format. |
+
+All five produce **structurally-identical** canonical output for equivalent input — the cross-format-identity property is the project's spine and a tested CI invariant. New formats register via `hindsight.base.BaseIngester`; see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the three-step recipe.
 
 ---
 
@@ -105,6 +125,8 @@ hindsight/
 │       └── ci.yml             ← matrix on Python 3.10 / 3.11 / 3.12
 ├── examples/
 │   └── walkthrough.md         ← copy-paste end-to-end demo
+├── scripts/
+│   └── capture_otel_anthropic.py  ← operator-run: live OTEL capture for fixture validation
 ├── prompts/
 │   └── replay-system.md       ← system prompt template for replay
 ├── fixtures/
@@ -138,33 +160,98 @@ hindsight/
 │   │   ├── diff.py            ← --strict adds tokens / latency to compared fields
 │   │   ├── replay.py          ← record-substitution + --live-tools + lazy live providers
 │   │   └── cli.py             ← argparse: show (--json/--depth) / stats / diff / replay / ci diff / validate / version
+│   ├── web/                   ← optional FastAPI UI (see [web] extra)
+│   │   ├── app.py             ← routes (browse / show / diff / replay + JSON twins)
+│   │   ├── render.py          ← HTML tree renderer
+│   │   ├── templates/         ← 6 Jinja2 templates
+│   │   └── static/style.css   ← single stylesheet, zero JS framework
 │   ├── spike_run.py           ← runnable end-to-end demo
 │   ├── test_spike.py          ← 18 schema / ingest / diff tests
 │   ├── test_replay.py         ← 12 replay-engine tests
-│   └── test_cli_verbs.py      ← 9 subprocess-driven CLI tests
+│   ├── test_cli_verbs.py      ← 14 subprocess-driven CLI tests
+│   └── test_web.py            ← 11 TestClient web-UI tests (skip if `[web]` not installed)
 └── runs/                      ← captured spike output for inspection
 ```
 
 ## Quickstart
 
+```bash
+# Clone, venv, editable install.
+git clone https://github.com/jwhit777/hindsight && cd hindsight
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e '.[dev]'
+
+# Three Makefile gates.
+make smoke       # ~1ms — runs the spike end-to-end
+make test        # 55 tests across 4 suites (test_spike + test_replay + test_cli_verbs + test_web)
+make lint        # ruff clean
+
+# Optional extras when you need them.
+pip install -e '.[web]'      # FastAPI web UI
+pip install -e '.[live]'     # anthropic + openai replay providers
+pip install -e '.[otel]'     # opentelemetry SDK + Anthropic instrumentation
 ```
-cd src/
-python3 spike_run.py        # runs the spike end-to-end
-python3 -m unittest discover -s . -p 'test_*.py' -v   # 39 tests across 3 suites
-```
+
+The web tests in `test_web.py` skip gracefully when `[web]` isn't installed — CI's default `[dev]`-only test jobs report 44 tests; running with `[dev,web]` reports 55.
 
 ## What's already done
 
-* Canonical schema written, 4 step types, lossless JSONL round-trip.
-* Five ingesters (JSONL, LangSmith run-tree, OTEL GenAI, Langfuse, Sub-Agent Bench) writing into the same canonical. Cross-format structural identity is a tested invariant.
-* `show()` (with `--json` for canonical-JSONL emission and `--depth N` for tree-depth capping), `stats()`, `diff()` (with `--strict` for token / latency regressions), `replay()` (with `--live-tools` opt-in for TOOL re-execution) all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes), `validate` (schema conformance), and `version` (prints version + adapter / provider list). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
-* `BaseIngester` Protocol — third parties can register new format adapters without touching the core.
-* Fixtures cover three semantic divergence patterns (routing, LLM-content, tool-call), two strict-mode divergence patterns (tokens, latency), and five cross-format identity fixtures (jsonl, langsmith, otel, langfuse, subagent_bench).
-* `spike_run.py` runs end-to-end, prints a calibration-card-style report.
-* 39 tests across `test_spike.py` (18), `test_replay.py` (12), and `test_cli_verbs.py` (9) — covering cross-format identity, round-trip, five divergence patterns, stats math, replay semantics including `--live-tools`, lazy-import guards for live providers, and CLI exit codes.
-* All tests pass on Python 3.10 / 3.11 / 3.12 in CI (now on the Node 24 runtime); total spike runtime is single-digit milliseconds.
+### Core
+- Canonical schema (`TraceRun` / `TraceStep`), 4 step kinds, lossless JSONL round-trip.
+- Five ingest adapters; cross-format-identity is a tested CI invariant.
+- Pure-function operations: `show()`, `stats()`, `diff()`, `replay()`.
+- Plugin protocol (`BaseIngester`) — third parties can add new formats without touching the core.
+
+### CLI surface
+- `hindsight show <path>` — render the tree (`--json` emits canonical JSONL for piping; `--depth N` caps tree depth).
+- `hindsight stats <path>` — aggregate (JSON by default; `--md` for Markdown).
+- `hindsight diff <a> <b>` — structural diff (`--md`; `--strict` adds tokens/latency to the comparison).
+- `hindsight replay <path> --from-step N [--model M] [--live] [--live-tools]` — re-derive the tail; mock-default, real providers behind `[live]`.
+- `hindsight ci diff <a> <b> --gate [--strict] [--md]` — exits 1 on divergence; drop into a PR check.
+- `hindsight validate <path>` — schema conformance check; exit 0 OK, 2 schema violation, 1 missing file.
+- `hindsight version` — version + registered ingesters + replay providers; `--version` also works as a top-level flag.
+- `hindsight serve [--root .] [--port 8080]` — local FastAPI web UI (behind `[web]` extra).
+
+### Replay providers
+- `MockProvider` — deterministic identity replay; no network, no SDK; default.
+- `AnthropicProvider`, `OpenAIProvider` — lazy-imported, in `[live]` extra. Drop in your own `Provider` by satisfying the Protocol.
+
+### Fixtures (14 total)
+- Five cross-format identity fixtures (one per adapter).
+- Three semantic divergence-pair fixtures (routing, LLM-content, tool-call) for default diff.
+- Two strict-mode divergence-pair fixtures (tokens, latency) that default diff intentionally ignores but `--strict` catches.
+
+### Tests + gates
+- 55 tests across four suites: `test_spike.py` (18) / `test_replay.py` (12) / `test_cli_verbs.py` (14) / `test_web.py` (11, skip-if-`[web]`-not-installed).
+- CI green on Python 3.10 / 3.11 / 3.12 (Node 24 runtime via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`).
+- Dedicated `typecheck` CI job: mypy 0 errors on `src/hindsight/`.
+- ruff lint clean. Pre-commit config ships in repo (`pre-commit install` to enable).
 
 Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md).
+
+## Add your own adapter
+
+The plugin protocol is 50 lines in [`src/hindsight/base.py`](./src/hindsight/base.py). A new adapter is three pieces:
+
+```python
+# src/hindsight/ingest_myformat.py
+from __future__ import annotations
+from pathlib import Path
+from .canonical import StepKind, TraceRun, TraceStep
+
+def ingest(path: Path) -> TraceRun:
+    """Parse <path>, return a TraceRun. All five existing adapters
+    follow this signature; the registry wraps it."""
+    raw = ...  # read your format
+    steps = [TraceStep(id=..., parent_id=..., kind=StepKind.LLM, ...) for ...]
+    run = TraceRun(id=..., source="myformat", steps=steps)
+    run.validate()
+    return run
+```
+
+Register it in `_register_builtins()` in `src/hindsight/base.py`. Add a fixture in the canonical 7-step shape, then extend `test_A_cross_format_identity` to include it. CI gates the cross-format-identity property — your adapter is correct iff that test stays green.
+
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) has the full recipe with reference to the canonical example (`ingest_langfuse.py`).
 
 ## Use in CI
 
@@ -214,11 +301,11 @@ Zero JavaScript, zero build step.
 
 ## What ships next
 
-See [`PLAN.md`](./PLAN.md). Three concrete next items, independent:
+See [`PLAN.md`](./PLAN.md) for the 90-day arc. Concrete near-term items:
 
-- **Reserve `hindsight-trace` on PyPI** — the v0.1.0 wheel + sdist are already built and attached to the [v0.1.0 GitHub release](https://github.com/jwhit777/hindsight/releases/tag/v0.1.0); the upload itself is one `twine upload` away.
-- **Validate the OTEL adapter against captured reality** — the current `otel_good.json` fixture was hand-written from the spec. Wire up `opentelemetry-instrumentation-anthropic`, capture a real `claude-haiku-4-5` call, ingest the resulting spans, and pin the captured trace as a fixture.
-- **Flip the repo public** when the launch posture is ready.
+- **PyPI publish.** v0.2.0 wheel + sdist are built and attached to the [v0.2.0 GitHub release](https://github.com/jwhit777/hindsight/releases/tag/v0.2.0); reserving the `hindsight-trace` name on PyPI is one `twine upload` away. Until then, install from source or grab the wheel from the release.
+- **Validate the OTEL adapter against captured reality** — `scripts/capture_otel_anthropic.py` is shipped; bring your own `ANTHROPIC_API_KEY`, run it once, and compare the captured `fixtures/otel_real.json` against the hand-written `fixtures/otel_good.json`. Any adapter bug surfaces immediately.
+- **Day-90 — the deployment-pattern catalog.** PLAN.md's marquee artifact: a public library of recurring agent-failure Hindsight diffs with diagnoses and fix recipes. Each one is a `<good, bad>` pair of canonical traces + a 2-paragraph diagnosis. Contributions welcome via the issue templates.
 
 ## License
 
