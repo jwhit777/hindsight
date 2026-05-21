@@ -48,3 +48,4 @@ ignore = ["E501"]
 # intentional; silence E402 only for these two files.
 "src/spike_run.py" = ["E402"]
 "src/test_spike.py" = ["E402"]
+"src/test_replay.py" = ["E402"]
