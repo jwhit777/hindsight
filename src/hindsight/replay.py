@@ -259,17 +259,27 @@ def replay(
     provider: Provider | None = None,
     model: str | None = None,
     live: bool = False,
+    live_tools: bool = False,
 ) -> TraceRun:
     """Replay `run` from `from_step` onward, returning a new TraceRun.
 
     Steps with index < `from_step` are copied verbatim. Steps with index
-    >= `from_step` of kind `StepKind.LLM` go through `provider.simulate()`;
-    other kinds (AGENT/TOOL/DECISION) are copied verbatim — tool re-
-    execution is opt-in behind a separate flag not exposed in v0.2.
+    >= `from_step` of kind `StepKind.LLM` go through `provider.simulate()`.
+    By default AGENT/TOOL/DECISION steps are copied verbatim — re-executing
+    a tool may be destructive (`get_current_time`, DB writes), so it's
+    opt-in behind the `live_tools` flag.
+
+    When `live_tools=True`, TOOL steps are also routed through
+    `provider.simulate()`. `MockProvider` identity-passes them (zero
+    network). `AnthropicProvider` / `OpenAIProvider` fall back to identity
+    on TOOL because the recorded request shape has no `messages` for them
+    to re-issue — callers wanting *real* tool re-execution must supply
+    their own provider that knows how to call the tool. AGENT and
+    DECISION steps are still always copied verbatim (they're orchestration
+    state, not externally-derived results).
 
     If `model` is provided, the LLM step's `model` field is overridden
-    *before* the provider sees it, so the provider can decide how to honor
-    the swap.
+    *before* the provider sees it.
 
     Provider defaults to `MockProvider()` (deterministic, no network). If
     `live=True` and no provider is passed, `AnthropicProvider()` is built —
@@ -280,40 +290,31 @@ def replay(
 
     cutoff = _resolve_from_step(run, from_step)
 
+    def _verbatim(s: TraceStep) -> TraceStep:
+        return replace(
+            s,
+            request=copy.deepcopy(s.request),
+            response=copy.deepcopy(s.response),
+            extra=copy.deepcopy(s.extra),
+        )
+
     new_steps: list[TraceStep] = []
     for i, step in enumerate(run.steps):
         if i < cutoff:
-            # Pre-cutoff: byte-identical copy (deep so the original run
-            # cannot be mutated through the returned one).
-            new_steps.append(
-                replace(
-                    step,
-                    request=copy.deepcopy(step.request),
-                    response=copy.deepcopy(step.response),
-                    extra=copy.deepcopy(step.extra),
-                )
-            )
+            new_steps.append(_verbatim(step))
             continue
-        if step.kind is not StepKind.LLM:
-            # AGENT / TOOL / DECISION — copy verbatim. See module docstring
-            # for why tool re-execution is not in v0.2.
-            new_steps.append(
-                replace(
-                    step,
-                    request=copy.deepcopy(step.request),
-                    response=copy.deepcopy(step.response),
-                    extra=copy.deepcopy(step.extra),
-                )
-            )
+        routed = step.kind is StepKind.LLM or (
+            live_tools and step.kind is StepKind.TOOL
+        )
+        if not routed:
+            new_steps.append(_verbatim(step))
             continue
-        # LLM step at or after cutoff — apply model override, then provider.
+        # Routed step at or after cutoff — apply model override, then provider.
         staged = step
-        if model is not None:
+        if model is not None and step.kind is StepKind.LLM:
             staged = replace(step, model=model)
         new_steps.append(provider.simulate(staged, model=model))
 
-    # Carry run-level metadata; stamp replay provenance into extra. Don't
-    # mutate the input's extra dict.
     new_extra = copy.deepcopy(run.extra)
     new_extra["replay"] = {
         "from_step": run.steps[cutoff].id,
@@ -321,6 +322,7 @@ def replay(
         "provider": provider.name,
         "model_override": model,
         "live": live,
+        "live_tools": live_tools,
     }
 
     return TraceRun(

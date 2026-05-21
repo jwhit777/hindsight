@@ -237,6 +237,48 @@ class ReplayTests(unittest.TestCase):
         out = replay(run, 0)
         out.validate()  # raises on dangling parents / dup ids / multi-root
 
+    # ---- live_tools flag ----
+
+    def test_replay_live_tools_false_preserves_tool_steps_verbatim(self) -> None:
+        """Default behavior: TOOL steps in the tail are byte-identical copies."""
+        run = ingest_jsonl(FIX / "canonical_good.jsonl")
+        prov = _CountingProvider()
+        out = replay(run, 0, provider=prov, live_tools=False)
+        # Provider was called only for LLM steps.
+        expected_calls = [s.id for s in run.steps if s.kind is StepKind.LLM]
+        self.assertEqual(prov.calls, expected_calls)
+        # Every TOOL step in the output matches the original structurally.
+        for orig, repl in zip(run.steps, out.steps):
+            if orig.kind is StepKind.TOOL:
+                self.assertEqual(_normalize_step(orig), _normalize_step(repl))
+
+    def test_replay_live_tools_true_routes_tool_through_provider(self) -> None:
+        """live_tools=True: provider.simulate() is called for both LLM and TOOL steps in tail."""
+        run = ingest_jsonl(FIX / "canonical_good.jsonl")
+        prov = _CountingProvider()
+        out = replay(run, 0, provider=prov, live_tools=True)
+        expected_calls = [
+            s.id for s in run.steps if s.kind in (StepKind.LLM, StepKind.TOOL)
+        ]
+        self.assertEqual(prov.calls, expected_calls)
+        # AGENT and DECISION steps are still NOT routed.
+        for s in run.steps:
+            if s.kind in (StepKind.AGENT, StepKind.DECISION):
+                self.assertNotIn(s.id, prov.calls)
+        # MockProvider is identity, so the resulting run still validates and
+        # is structurally equivalent.
+        out.validate()
+        for orig, repl in zip(run.steps, out.steps):
+            self.assertEqual(_normalize_step(orig), _normalize_step(repl))
+
+    def test_replay_extra_records_live_tools_flag(self) -> None:
+        """Run-level extra['replay']['live_tools'] reflects the kwarg."""
+        run = ingest_jsonl(FIX / "canonical_good.jsonl")
+        a = replay(run, 0, live_tools=False)
+        b = replay(run, 0, live_tools=True)
+        self.assertIs(a.extra["replay"]["live_tools"], False)
+        self.assertIs(b.extra["replay"]["live_tools"], True)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
