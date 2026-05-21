@@ -99,6 +99,7 @@ hindsight/
 ├── CANDIDATES.md              ← 6 candidates considered, why Hindsight won
 ├── DEMO-PLAN.md
 ├── TECH-STACK.md
+├── LAUNCH.md                  ← v0.2 launch post draft (not published)
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             ← matrix on Python 3.10 / 3.11 / 3.12
@@ -108,14 +109,19 @@ hindsight/
 │   └── replay-system.md       ← system prompt template for replay
 ├── fixtures/
 │   ├── canonical_good.jsonl
-│   ├── canonical_bad.jsonl
+│   ├── canonical_bad.jsonl                   ← routing divergence
 │   ├── canonical_llm_content_good.jsonl
-│   ├── canonical_llm_content_bad.jsonl
+│   ├── canonical_llm_content_bad.jsonl       ← LLM-content divergence
 │   ├── canonical_tool_error_good.jsonl
-│   ├── canonical_tool_error_bad.jsonl
+│   ├── canonical_tool_error_bad.jsonl        ← tool-call divergence
+│   ├── canonical_token_div_good.jsonl
+│   ├── canonical_token_div_bad.jsonl         ← token divergence (strict-mode)
+│   ├── canonical_latency_div_good.jsonl
+│   ├── canonical_latency_div_bad.jsonl       ← latency divergence (strict-mode)
 │   ├── langsmith_good.json
 │   ├── otel_good.json
 │   ├── langfuse_good.json
+│   ├── subagent_bench_good.json
 │   └── README.md
 ├── src/
 │   ├── hindsight/
@@ -126,14 +132,15 @@ hindsight/
 │   │   ├── ingest_langsmith.py
 │   │   ├── ingest_otel.py
 │   │   ├── ingest_langfuse.py
+│   │   ├── ingest_subagent_bench.py
 │   │   ├── show.py
 │   │   ├── stats.py
-│   │   ├── diff.py
-│   │   ├── replay.py          ← record-substitution + lazy live providers
+│   │   ├── diff.py            ← --strict adds tokens / latency to compared fields
+│   │   ├── replay.py          ← record-substitution + --live-tools + lazy live providers
 │   │   └── cli.py             ← argparse: show / stats / diff / replay / ci diff / validate
 │   ├── spike_run.py           ← runnable end-to-end demo
-│   ├── test_spike.py          ← 13 schema / ingest / diff tests
-│   ├── test_replay.py         ← 9 replay-engine tests
+│   ├── test_spike.py          ← 18 schema / ingest / diff tests
+│   ├── test_replay.py         ← 12 replay-engine tests
 │   └── test_cli_verbs.py      ← 9 subprocess-driven CLI tests
 └── runs/                      ← captured spike output for inspection
 ```
@@ -143,19 +150,19 @@ hindsight/
 ```
 cd src/
 python3 spike_run.py        # runs the spike end-to-end
-python3 -m unittest discover -s . -p 'test_*.py' -v   # 31 tests across 3 suites
+python3 -m unittest discover -s . -p 'test_*.py' -v   # 39 tests across 3 suites
 ```
 
 ## What's already done
 
 * Canonical schema written, 4 step types, lossless JSONL round-trip.
-* Four ingesters (JSONL, LangSmith run-tree, OTEL GenAI, Langfuse) writing into the same canonical. Cross-format structural identity is a tested invariant.
-* `show()`, `stats()`, `diff()`, `replay()` all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes) and `validate` (schema conformance). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
+* Five ingesters (JSONL, LangSmith run-tree, OTEL GenAI, Langfuse, Sub-Agent Bench) writing into the same canonical. Cross-format structural identity is a tested invariant.
+* `show()`, `stats()`, `diff()` (with `--strict` for token / latency regressions), `replay()` (with `--live-tools` opt-in for TOOL re-execution) all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes) and `validate` (schema conformance). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
 * `BaseIngester` Protocol — third parties can register new format adapters without touching the core.
-* Fixtures cover three divergence patterns (routing, LLM-content, tool-call) plus four cross-format identity fixtures (jsonl, langsmith, otel, langfuse).
+* Fixtures cover three semantic divergence patterns (routing, LLM-content, tool-call), two strict-mode divergence patterns (tokens, latency), and five cross-format identity fixtures (jsonl, langsmith, otel, langfuse, subagent_bench).
 * `spike_run.py` runs end-to-end, prints a calibration-card-style report.
-* 31 tests across `test_spike.py` (13), `test_replay.py` (9), and `test_cli_verbs.py` (9) — covering cross-format identity, round-trip, three divergence patterns, stats math, replay semantics, lazy-import guards for live providers, and CLI exit codes.
-* All tests pass on Python 3.10 / 3.11 / 3.12 in CI; total spike runtime is single-digit milliseconds.
+* 39 tests across `test_spike.py` (18), `test_replay.py` (12), and `test_cli_verbs.py` (9) — covering cross-format identity, round-trip, five divergence patterns, stats math, replay semantics including `--live-tools`, lazy-import guards for live providers, and CLI exit codes.
+* All tests pass on Python 3.10 / 3.11 / 3.12 in CI (now on the Node 24 runtime); total spike runtime is single-digit milliseconds.
 
 Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md).
 

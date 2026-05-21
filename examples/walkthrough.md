@@ -99,15 +99,16 @@ Output:
 
 ---
 
-## 3. Same trace, four formats — cross-format identity
+## 3. Same trace, five formats — cross-format identity
 
-The same logical 7-step run is available in all four supported formats.
+The same logical 7-step run is available in all five supported formats.
 Run `hindsight show` on each:
 
 ```bash
 hindsight show fixtures/langsmith_good.json
 hindsight show fixtures/otel_good.json
 hindsight show fixtures/langfuse_good.json
+hindsight show fixtures/subagent_bench_good.json
 ```
 
 Each command produces the identical tree structure shown in step 2 — same step
@@ -116,8 +117,9 @@ auto-detects the format from the file suffix and top-level JSON keys.
 
 This is the **cross-format-identity property**: once a trace is in the
 canonical `TraceRun` schema, `show`, `stats`, `diff`, and `replay` are
-indifferent to which tool captured it. A Langfuse trace and a LangSmith trace
-of the same agent run are interchangeable.
+indifferent to which tool captured it. A Langfuse trace, a LangSmith trace,
+an OpenTelemetry export, and a Sub-Agent Bench export of the same agent run
+are interchangeable.
 
 ---
 
@@ -158,6 +160,25 @@ parent diverged.
 
 Drop `--md` for JSON output suitable for programmatic processing.
 
+### Strict mode — tokens and latency
+
+By default the diff compares semantic fields (`response`, `error`, `model`,
+`kind`, `name`). Pass `--strict` to also compare `tokens_in`, `tokens_out`,
+and `latency_ms`. Useful when you want a token-cost or wall-clock regression
+gate that's independent of semantic divergence:
+
+```bash
+# Default diff: clean, even though tokens_out differs at step s5.
+hindsight diff fixtures/canonical_token_div_good.jsonl fixtures/canonical_token_div_bad.jsonl --md
+
+# Strict diff: catches the token divergence.
+hindsight diff fixtures/canonical_token_div_good.jsonl fixtures/canonical_token_div_bad.jsonl --md --strict
+```
+
+The same pattern applies to `canonical_latency_div_{good,bad}.jsonl` for
+latency regressions. Both flags pair with `--gate` on the CI variant
+(`hindsight ci diff ... --gate --strict`) for a token-budget PR check.
+
 ---
 
 ## 5. Replay from a step
@@ -191,6 +212,24 @@ To inspect the replayed trace:
 ```bash
 hindsight show /tmp/replayed.jsonl
 ```
+
+### Opt-in TOOL re-execution
+
+By default only LLM steps in the replayed tail go through the provider —
+AGENT, TOOL, and DECISION steps are copied verbatim, because re-executing
+a tool may be destructive (`get_current_time`, a DB write, an irreversible
+API call). The `--live-tools` flag opts TOOL steps into provider routing
+too:
+
+```bash
+hindsight replay fixtures/canonical_good.jsonl --from-step 3 --live-tools --out /tmp/lt.jsonl
+```
+
+With `MockProvider` (default), this is still identity — TOOL steps come
+back unchanged. The flag exists so callers supplying a custom provider
+that actually re-executes tools have an explicit opt-in. AGENT and
+DECISION steps are *always* copied verbatim — they're orchestration state,
+not externally-derived results.
 
 ---
 

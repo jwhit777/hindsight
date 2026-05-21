@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Sub-Agent Bench adapter** (`ingest_subagent_bench`) — 5th ingest format.
+  Maps the nested `orchestrator → steps → subagent_call → steps` structure
+  into the canonical schema. Cross-format-identity property now holds
+  across 5 adapters.
+- **`replay --live-tools` flag** — opt-in routing of `StepKind.TOOL` steps
+  through the provider in the replayed tail. Default behavior unchanged
+  (TOOL steps copied verbatim). `MockProvider` identity-passes them with
+  zero network; live providers fall back to identity when the recorded
+  request has no `messages`. Callers who want real tool re-execution
+  supply their own provider.
+- **`diff --strict` and `ci diff --strict` CLI flags** — expose the
+  pre-existing `strict=True` semantic that also compares `tokens_in`,
+  `tokens_out`, and `latency_ms` per step. Useful for token/latency
+  regression gates separate from semantic divergence.
+- **Strict-mode divergence fixture pairs** —
+  `canonical_token_div_{good,bad}.jsonl` and
+  `canonical_latency_div_{good,bad}.jsonl` plus 4 new tests (C4–C7)
+  verifying that default diff stays clean while `--strict` catches the
+  divergence at the affected step.
+- **LAUNCH.md draft** at repo root — not for publication; v0.2 launch post
+  outline.
+- **README visual** — small ASCII "Hindsight is 20/20" panel before the pitch.
+
+### Changed
+- **Test count: 39** across `test_spike.py` (18), `test_replay.py` (12),
+  `test_cli_verbs.py` (9).
+- **CI runs on Node 24** via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in
+  the workflow env. Surfaces any incompatibility now ahead of GitHub's
+  2026-09-16 hard cutover; current actions/checkout@v4 +
+  actions/setup-python@v5 are compatible.
+- **README cleanup** — dropped the "Where this fits in Justin's portfolio"
+  section and all Day-0 / Day-1 / `FIRST-4-HOURS.md` references; refreshed
+  file tree, test count, adapter count, and "What ships next" section to
+  match v0.1.0+ reality.
+
 ## [0.1.0] - 2026-05-21
 
 ### Added
