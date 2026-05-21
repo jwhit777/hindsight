@@ -72,40 +72,57 @@ A trace from any supported source is parsed by a format-specific *ingester* into
 ## Repository layout
 
 ```
-2026-05-15-fde-portfolio/
-├── README.md                ← this file
-├── PLAN.md                  ← bottleneck-scoping output (single-page plan)
-├── CANDIDATES.md            ← 6 candidates considered, why Hindsight won
-├── TECH-STACK.md            ← stack, with rationale
-├── ARCHITECTURE.md          ← system diagram + data shapes + failure modes
-├── EVALS.md                 ← what gets tested, what counts as "good enough"
-├── DEMO-PLAN.md             ← 5-minute interview demo script
-├── SPIKE.md                 ← what the spike proved (+ output)
-├── elevator-pitch.md        ← 60-second verbal pitch
-├── cover-letter-snippet.md  ← 2-paragraph cover-letter fragment
-├── CLAUDE-CODE-PROMPT.md    ← copy-paste handoff prompt for Claude Code
+hindsight/
+├── README.md                  ← this file
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE                    ← Apache-2.0
+├── Makefile                   ← smoke / test / lint / build targets
+├── pyproject.toml             ← hatchling, name=hindsight-trace
+├── PLAN.md                    ← bottleneck-scoping output (single-page plan)
+├── ARCHITECTURE.md            ← system diagram + data shapes + failure modes
+├── EVALS.md                   ← what gets tested, what counts as "good enough"
+├── SPIKE.md                   ← what the spike proved (+ output)
+├── CANDIDATES.md              ← 6 candidates considered, why Hindsight won
+├── DEMO-PLAN.md
+├── TECH-STACK.md
+├── .github/
+│   └── workflows/
+│       └── ci.yml             ← matrix on Python 3.10 / 3.11 / 3.12
+├── examples/
+│   └── walkthrough.md         ← copy-paste end-to-end demo
 ├── prompts/
-│   └── replay-system.md     ← system prompt template for replay (v0)
+│   └── replay-system.md       ← system prompt template for replay
 ├── fixtures/
 │   ├── canonical_good.jsonl
 │   ├── canonical_bad.jsonl
+│   ├── canonical_llm_content_good.jsonl
+│   ├── canonical_llm_content_bad.jsonl
+│   ├── canonical_tool_error_good.jsonl
+│   ├── canonical_tool_error_bad.jsonl
 │   ├── langsmith_good.json
 │   ├── otel_good.json
+│   ├── langfuse_good.json
 │   └── README.md
 ├── src/
 │   ├── hindsight/
 │   │   ├── __init__.py
-│   │   ├── canonical.py     ← dataclasses for TraceRun, TraceStep
+│   │   ├── canonical.py       ← dataclasses for TraceRun, TraceStep
+│   │   ├── base.py            ← BaseIngester Protocol + register() + auto_ingest()
 │   │   ├── ingest_jsonl.py
 │   │   ├── ingest_langsmith.py
 │   │   ├── ingest_otel.py
+│   │   ├── ingest_langfuse.py
 │   │   ├── show.py
 │   │   ├── stats.py
 │   │   ├── diff.py
-│   │   └── cli.py           ← argparse entrypoint
-│   ├── spike_run.py         ← runnable end-to-end
-│   └── test_spike.py        ← 10 self-test assertions
-└── runs/                    ← captured spike output for inspection
+│   │   ├── replay.py          ← record-substitution + lazy live providers
+│   │   └── cli.py             ← argparse: show / stats / diff / replay / ci diff / validate
+│   ├── spike_run.py           ← runnable end-to-end demo
+│   ├── test_spike.py          ← 13 schema / ingest / diff tests
+│   ├── test_replay.py         ← 9 replay-engine tests
+│   └── test_cli_verbs.py      ← 9 subprocess-driven CLI tests
+└── runs/                      ← captured spike output for inspection
 ```
 
 ## Quickstart
@@ -113,18 +130,19 @@ A trace from any supported source is parsed by a format-specific *ingester* into
 ```
 cd src/
 python3 spike_run.py        # runs the spike end-to-end
-python3 test_spike.py       # 10 self-test assertions
+python3 -m unittest discover -s . -p 'test_*.py' -v   # 31 tests across 3 suites
 ```
 
 ## What's already done
 
 * Canonical schema written, 4 step types, lossless JSONL round-trip.
-* Three ingesters (JSONL, LangSmith-export shape, OTEL GenAI span shape) writing into the same canonical.
-* `show()`, `stats()`, `diff()` all working in stdlib Python (no numpy, no pydantic).
-* Three fixture pairs in `fixtures/`. Designed divergences for diff testing.
+* Four ingesters (JSONL, LangSmith run-tree, OTEL GenAI, Langfuse) writing into the same canonical. Cross-format structural identity is a tested invariant.
+* `show()`, `stats()`, `diff()`, `replay()` all working in stdlib Python (no numpy, no pydantic). CLI adds `ci diff --gate` (PR-check exit codes) and `validate` (schema conformance). Live providers (Anthropic, OpenAI) sit behind the `[live]` extra.
+* `BaseIngester` Protocol — third parties can register new format adapters without touching the core.
+* Fixtures cover three divergence patterns (routing, LLM-content, tool-call) plus four cross-format identity fixtures (jsonl, langsmith, otel, langfuse).
 * `spike_run.py` runs end-to-end, prints a calibration-card-style report.
-* `test_spike.py` — 10 assertions covering cross-format identity, round-trip, divergence detection, stats math, tree depth handling.
-* All tests pass; total spike runtime is single-digit milliseconds.
+* 31 tests across `test_spike.py` (13), `test_replay.py` (9), and `test_cli_verbs.py` (9) — covering cross-format identity, round-trip, three divergence patterns, stats math, replay semantics, lazy-import guards for live providers, and CLI exit codes.
+* All tests pass on Python 3.10 / 3.11 / 3.12 in CI; total spike runtime is single-digit milliseconds.
 
 Spike output captured verbatim in [`SPIKE.md`](./SPIKE.md).
 
@@ -158,7 +176,11 @@ first-pass check before the diff.
 
 ## What ships next
 
-See [`PLAN.md`](./PLAN.md). Short version: flip the repo public, then implement a real OTEL-GenAI-instrumented Anthropic SDK call and ingest its output through Hindsight to close the demo loop.
+See [`PLAN.md`](./PLAN.md). Three concrete next items, independent:
+
+- **Reserve `hindsight-trace` on PyPI** — the v0.1.0 wheel + sdist are already built and attached to the [v0.1.0 GitHub release](https://github.com/jwhit777/hindsight/releases/tag/v0.1.0); the upload itself is one `twine upload` away.
+- **Validate the OTEL adapter against captured reality** — the current `otel_good.json` fixture was hand-written from the spec. Wire up `opentelemetry-instrumentation-anthropic`, capture a real `claude-haiku-4-5` call, ingest the resulting spans, and pin the captured trace as a fixture.
+- **Flip the repo public** when the launch posture is ready.
 
 ## License
 
