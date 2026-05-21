@@ -12,7 +12,8 @@ import json
 import pathlib
 import sys
 
-from . import diff, ingest_jsonl, ingest_langsmith, ingest_otel, replay, show
+from . import diff, replay, show
+from .base import auto_ingest
 from .canonical import TraceRun
 from .diff import diff_markdown
 from .stats import stats, stats_markdown
@@ -21,16 +22,10 @@ from .stats import stats, stats_markdown
 def _auto_ingest(path: pathlib.Path):
     if not path.exists():
         raise SystemExit(f"hindsight: no such file: {path}")
-    if path.suffix == ".jsonl":
-        return ingest_jsonl(path)
-    if path.suffix == ".json":
-        raw = json.loads(path.read_text())
-        if isinstance(raw, dict) and "resourceSpans" in raw:
-            return ingest_otel(path)
-        if isinstance(raw, dict) and ("child_runs" in raw or "run_type" in raw):
-            return ingest_langsmith(path)
-        raise SystemExit(f"hindsight: can't auto-detect JSON format for {path}")
-    raise SystemExit(f"hindsight: unsupported suffix {path.suffix!r} (want .jsonl or .json)")
+    try:
+        return auto_ingest(path)
+    except ValueError as e:
+        raise SystemExit(f"hindsight: {e}") from e
 
 
 def _build_parser() -> argparse.ArgumentParser:
