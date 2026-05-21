@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from hindsight import ingest_jsonl
 from hindsight.canonical import StepKind, TraceStep
-from hindsight.replay import MockProvider, Provider, replay
+from hindsight.replay import MockProvider, OpenAIProvider, Provider, replay
 
 FIX = ROOT.parent / "fixtures"
 
@@ -176,10 +176,59 @@ class ReplayTests(unittest.TestCase):
         )
         self.assertIn("OK", result.stdout)
 
+    # ---- 5 (OpenAI): lazy openai import ----
+
+    def test_openai_provider_lazy_import(self) -> None:
+        """`from hindsight.replay import OpenAIProvider` must work without
+        the `openai` SDK installed. We shell out to a fresh Python, poison
+        `openai` on sys.meta_path, then verify importing the class succeeds
+        while instantiation raises ImportError."""
+        code = (
+            "import sys\n"
+            # Poison openai: any attempt to import it raises ImportError.
+            "class _Blocker:\n"
+            "    def find_spec(self, name, path=None, target=None):\n"
+            "        if name == 'openai' or name.startswith('openai.'):\n"
+            "            raise ImportError('blocked by test')\n"
+            "        return None\n"
+            "sys.meta_path.insert(0, _Blocker())\n"
+            # Importing the class must work even though openai is blocked.
+            "from hindsight.replay import OpenAIProvider  # noqa\n"
+            # Instantiation must raise ImportError because openai can't load.
+            "try:\n"
+            "    OpenAIProvider()\n"
+            "    raise AssertionError('expected ImportError')\n"
+            "except ImportError:\n"
+            "    pass\n"
+            "print('OK')\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"lazy-import subprocess failed.\nstdout={result.stdout}\nstderr={result.stderr}",
+        )
+        self.assertIn("OK", result.stdout)
+
     # ---- bonus: Provider is a runtime-checkable Protocol ----
 
     def test_mock_provider_satisfies_protocol(self) -> None:
         self.assertIsInstance(MockProvider(), Provider)
+
+    # ---- bonus: OpenAIProvider class satisfies Provider Protocol ----
+
+    def test_openai_provider_satisfies_protocol(self) -> None:
+        """OpenAIProvider's class shape must satisfy the Provider Protocol
+        without instantiating (which would require the SDK and a live key).
+        We check the structural contract: `name` attribute and `simulate`
+        method must both be present."""
+        self.assertTrue(hasattr(OpenAIProvider, "name"), "OpenAIProvider missing 'name'")
+        self.assertTrue(hasattr(OpenAIProvider, "simulate"), "OpenAIProvider missing 'simulate'")
+        self.assertEqual(OpenAIProvider.name, "openai")
 
     # ---- bonus: replay output is a valid TraceRun ----
 

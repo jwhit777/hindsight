@@ -157,6 +157,75 @@ class AnthropicProvider:
         )
 
 
+class OpenAIProvider:
+    """Live replay against the OpenAI API.
+
+    Lazy import — the `openai` SDK is in the `[live]` extra, not a
+    required dependency. Importing `hindsight.replay` on a stdlib-only
+    install must succeed; the SDK is only resolved when this class is
+    instantiated.
+
+    Reads `OPENAI_API_KEY` from env. Honors the `model` override at call
+    time. Re-issues the recorded `request.messages` (if present) and writes
+    the resulting completion into the returned step's `response`.
+
+    OpenAI's chat.completions.create accepts messages with role=system
+    natively (unlike Anthropic which separates it), so no message
+    pre-processing is needed.
+    """
+
+    name = "openai"
+
+    def __init__(self, *, model: str = "gpt-4o") -> None:
+        # Lazy import so module load doesn't require the SDK.
+        try:
+            from openai import OpenAI  # noqa: F401  (deferred resolution)
+        except ImportError as exc:  # pragma: no cover — exercised only with [live]
+            raise ImportError(
+                "OpenAIProvider requires the `openai` SDK. "
+                "Install with: pip install 'hindsight-trace[live]'"
+            ) from exc
+        from openai import OpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "OpenAIProvider needs OPENAI_API_KEY in env"
+            )
+        self._client = OpenAI(api_key=api_key)
+        self._default_model = model
+
+    def simulate(self, step: TraceStep, *, model: str | None = None) -> TraceStep:
+        # The recorded request shape is whatever the originating adapter
+        # captured. We expect at minimum `messages: [...]`. If it's absent
+        # we fall back to MockProvider behavior — we have nothing to send.
+        req = step.request or {}
+        messages = req.get("messages")
+        target_model = model or step.model or self._default_model
+        if messages is None:
+            return MockProvider().simulate(step, model=model)
+
+        # OpenAI chat.completions accepts role=system messages inline —
+        # no need to separate the system prompt as Anthropic requires.
+        max_tokens = max(step.tokens_out, 1024) if step.tokens_out else 1024
+        resp = self._client.chat.completions.create(
+            model=target_model,
+            messages=messages,
+            temperature=0,
+            max_tokens=max_tokens,
+        )
+        choice = resp.choices[0].message
+        return replace(
+            step,
+            model=target_model,
+            request=copy.deepcopy(step.request),
+            response={"text": choice.content or ""},
+            tokens_in=getattr(getattr(resp, "usage", None), "prompt_tokens", step.tokens_in),
+            tokens_out=getattr(getattr(resp, "usage", None), "completion_tokens", step.tokens_out),
+            extra={**(copy.deepcopy(step.extra) or {}), "replayed_by": "openai"},
+        )
+
+
 def _resolve_from_step(run: TraceRun, from_step: str | int) -> int:
     """Resolve `from_step` to a positional index into `run.steps`.
 
